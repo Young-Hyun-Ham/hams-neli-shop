@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Mail, MapPin, Menu, Phone, X } from 'lucide-react';
-import { SiFacebook, SiInstagram, SiX } from 'react-icons/si';
+import { SiFacebook, SiInstagram, SiKakao, SiTiktok, SiX } from 'react-icons/si';
 import { DEFAULT_SITE_SETTINGS, ROUTE_PATHS, type SiteSettings } from '@/lib/index';
 import { settingsStorage } from '@/lib/settingsStorage';
 
@@ -14,6 +14,7 @@ const PENDING_SCROLL_KEY = 'pending-home-scroll-target';
 const REVIEW_IMAGE_DRAFT_KEY = 'pending-testimonial-images';
 const REVIEW_EDIT_DRAFT_KEY = 'testimonial-edit-draft';
 const HOME_SECTION_IDS = ['services', 'pricing', 'contact'] as const;
+const hasVisibleSocialLink = (value: string) => value.trim().length > 0;
 
 type NavItem = {
   to: string;
@@ -107,6 +108,18 @@ export function Layout({ children }: LayoutProps) {
       { to: ROUTE_PATHS.ADMIN, label: '관리자' },
     ],
     [],
+  );
+
+  const socialLinks = useMemo(
+    () =>
+      [
+        { href: siteSettings.facebookUrl, label: '페이스북', icon: SiFacebook },
+        { href: siteSettings.instagramUrl, label: '인스타그램', icon: SiInstagram },
+        { href: siteSettings.tiktokUrl, label: '틱톡', icon: SiTiktok },
+        { href: siteSettings.xUrl, label: 'X', icon: SiX },
+        { href: siteSettings.kakaoOpenChatUrl, label: '카카오톡 오픈방', icon: SiKakao },
+      ].filter(({ href }) => hasVisibleSocialLink(href)),
+    [siteSettings],
   );
 
   const handleAnchorClick = (to: string) => {
@@ -263,7 +276,7 @@ export function Layout({ children }: LayoutProps) {
                 </span>
               </div>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                손끝의 분위기까지 완성하는 프리미엄 네일 서비스를 제공합니다.
+                손끝과 분위기까지 완성하는 프리미엄 네일 서비스를 제공합니다.
               </p>
             </div>
 
@@ -285,38 +298,25 @@ export function Layout({ children }: LayoutProps) {
               </div>
             </div>
 
-            <div>
-              <h3 className="mb-4 font-semibold text-foreground">소셜 미디어</h3>
-              <div className="flex space-x-4">
-                <a
-                  href={siteSettings.facebookUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-muted transition-all duration-200 hover:bg-primary hover:text-white"
-                  aria-label="페이스북"
-                >
-                  <SiFacebook size={20} />
-                </a>
-                <a
-                  href={siteSettings.instagramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-muted transition-all duration-200 hover:bg-primary hover:text-white"
-                  aria-label="인스타그램"
-                >
-                  <SiInstagram size={20} />
-                </a>
-                <a
-                  href={siteSettings.xUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-muted transition-all duration-200 hover:bg-primary hover:text-white"
-                  aria-label="X"
-                >
-                  <SiX size={20} />
-                </a>
+            {socialLinks.length > 0 && (
+              <div>
+                <h3 className="mb-4 font-semibold text-foreground">소셜 미디어</h3>
+                <div className="flex flex-wrap gap-4">
+                  {socialLinks.map(({ href, label, icon: Icon }) => (
+                    <a
+                      key={label}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-muted transition-all duration-200 hover:bg-primary hover:text-white"
+                      aria-label={label}
+                    >
+                      <Icon size={20} />
+                    </a>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="mt-8 border-t border-border pt-8 text-center">

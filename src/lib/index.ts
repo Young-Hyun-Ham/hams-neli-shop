@@ -1,4 +1,4 @@
-export const ROUTE_PATHS = {
+﻿export const ROUTE_PATHS = {
   HOME: '/',
   GALLERY: '/gallery',
   TESTIMONIALS: '/testimonials',
@@ -64,6 +64,7 @@ export interface SiteSettings {
   weekendHours: TimeRange;
   closedDays: Weekday[];
   instagramUrl: string;
+  tiktokUrl: string;
   facebookUrl: string;
   kakaoOpenChatUrl: string;
   xUrl: string;
@@ -89,6 +90,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   },
   closedDays: ['월'],
   instagramUrl: 'https://instagram.com',
+  tiktokUrl: 'https://www.tiktok.com/',
   facebookUrl: 'https://facebook.com',
   kakaoOpenChatUrl: 'https://open.kakao.com/',
   xUrl: 'https://x.com',

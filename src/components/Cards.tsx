@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Star, Trash2 } from 'lucide-react';
+import { ExternalLink, Play, Star, Trash2 } from 'lucide-react';
+import { FacebookEmbed } from 'react-social-media-embed';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { PriceItem, Service, Testimonial, Video } from '@/lib/index';
@@ -58,6 +58,32 @@ const getPlayableEmbedUrl = (value: string) => {
 };
 
 const isDirectVideoFile = (value: string) => /\.(mp4|webm|ogg)(\?|#|$)/i.test(value);
+
+const getVideoPlatform = (value: string) => {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+
+    if (hostname.includes('instagram.com')) return 'instagram';
+    if (hostname.includes('tiktok.com')) return 'tiktok';
+    if (hostname.includes('facebook.com') || hostname.includes('fb.watch')) return 'facebook';
+    if (hostname.includes('x.com') || hostname.includes('twitter.com')) return 'x';
+  } catch {
+    return 'unknown';
+  }
+
+  return 'unknown';
+};
+
+const getOpenLinkLabel = (platform: ReturnType<typeof getVideoPlatform>) => {
+  switch (platform) {
+    case 'facebook':
+      return '페이스북 새창 열기';
+    case 'x':
+      return 'X 새창 열기';
+    default:
+      return '원본 새창 열기';
+  }
+};
 
 export function ServiceCard({ service }: { service: Service }) {
   return (
@@ -223,6 +249,9 @@ export function VideoCard({
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const playableUrl = useMemo(() => getPlayableEmbedUrl(video.url), [video.url]);
   const directVideo = useMemo(() => isDirectVideoFile(video.url), [video.url]);
+  const platform = useMemo(() => getVideoPlatform(video.url), [video.url]);
+  const openLinkLabel = useMemo(() => getOpenLinkLabel(platform), [platform]);
+  const isFacebook = platform === 'facebook';
 
   return (
     <>
@@ -259,39 +288,51 @@ export function VideoCard({
               <CardTitle className="line-clamp-2 text-lg font-semibold text-foreground">{video.title}</CardTitle>
               <CardDescription className="line-clamp-2 text-muted-foreground">{video.description}</CardDescription>
             </CardHeader>
-            <CardFooter className="flex items-center justify-between">
+            <CardFooter className="flex items-center justify-between gap-3">
               <span className="text-sm text-muted-foreground">
                 {new Date(video.created_at).toLocaleDateString('ko-KR')}
               </span>
-              {isAdmin && onDelete && (
+              <div className="flex items-center gap-2">
+                {!playableUrl && !isFacebook && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={video.url} target="_blank" rel="noreferrer">
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      {openLinkLabel}
+                    </a>
+                  </Button>
+                )}
+                {isAdmin && onDelete && (
                 <Button variant="destructive" size="sm" onClick={() => onDelete(video.id)}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   삭제
                 </Button>
-              )}
+                )}
+              </div>
             </CardFooter>
           </Card>
         </motion.div>
       </motion.div>
 
       <Dialog open={isPlayerOpen} onOpenChange={setIsPlayerOpen}>
-        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-4xl gap-0 overflow-hidden p-0">
-          <DialogHeader className="border-b px-4 py-4 sm:px-6">
-            <DialogTitle>{video.title}</DialogTitle>
-            <DialogDescription className="line-clamp-2">
+        <DialogContent className={`flex h-[92dvh] w-[calc(100vw-1rem)] max-w-5xl flex-col gap-0 overflow-hidden border-none p-0 sm:h-[88dvh] sm:w-[calc(100vw-3rem)] sm:rounded-xl ${isFacebook ? 'bg-white' : 'bg-black'}`}>
+          <DialogTitle className="sr-only">{video.title}</DialogTitle>
+          <DialogDescription className="sr-only">
               {video.description || '등록된 영상 주소를 모달에서 재생합니다.'}
             </DialogDescription>
-          </DialogHeader>
-          <div className="bg-black px-3 py-3 sm:px-6 sm:py-6">
-            <div className="overflow-hidden rounded-xl bg-black">
-              {playableUrl ? (
+          <div className={`flex min-h-0 flex-1 items-center justify-center p-2 sm:p-4 ${isFacebook ? 'overflow-y-auto bg-neutral-100' : 'bg-black'}`}>
+            <div className={`flex h-full w-full items-center justify-center overflow-hidden rounded-xl ${isFacebook ? 'bg-neutral-100' : 'bg-black'}`}>
+              {isFacebook ? (
+                <div className="flex w-full justify-center py-4">
+                  <FacebookEmbed url={video.url} width={550} />
+                </div>
+              ) : playableUrl ? (
                 directVideo ? (
                   <video
                     src={playableUrl}
                     controls
                     autoPlay
                     playsInline
-                    className="aspect-video w-full bg-black"
+                    className="h-full w-full bg-black object-contain"
                   />
                 ) : (
                   <iframe
@@ -299,11 +340,11 @@ export function VideoCard({
                     src={playableUrl}
                     allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
                     allowFullScreen
-                    className="aspect-video w-full bg-black"
+                    className="h-full w-full bg-black"
                   />
                 )
               ) : (
-                <div className="flex aspect-video items-center justify-center px-6 text-center text-sm leading-6 text-white/80">
+                <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm leading-6 text-white/80">
                   이 주소는 모달 재생 형식으로 변환할 수 없습니다.
                 </div>
               )}

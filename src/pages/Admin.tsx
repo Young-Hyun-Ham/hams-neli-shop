@@ -41,6 +41,8 @@ import { Textarea } from '@/components/ui/textarea';
 
 const INSTAGRAM_HOME_URL = 'https://www.instagram.com/';
 const TIKTOK_HOME_URL = 'https://www.tiktok.com/';
+const FACEBOOK_HOME_URL = 'https://www.facebook.com/';
+const X_HOME_URL = 'https://x.com/';
 const WEEKDAYS: Weekday[] = ['월', '화', '수', '목', '금', '토', '일'];
 
 const getMapEmbedUrl = (query: string) =>
@@ -49,9 +51,56 @@ const getMapEmbedUrl = (query: string) =>
 const isSupportedVideoUrl = (value: string) => {
   try {
     const parsed = new URL(value);
-    return parsed.hostname.includes('instagram.com') || parsed.hostname.includes('tiktok.com');
+    const hostname = parsed.hostname.toLowerCase();
+
+    return (
+      hostname.includes('instagram.com') ||
+      hostname.includes('tiktok.com') ||
+      hostname.includes('facebook.com') ||
+      hostname.includes('fb.watch') ||
+      hostname.includes('x.com') ||
+      hostname.includes('twitter.com')
+    );
   } catch {
     return false;
+  }
+};
+
+const isEmbeddableFacebookUrl = (parsed: URL) => {
+  const hostname = parsed.hostname.toLowerCase();
+  const pathname = parsed.pathname.toLowerCase();
+
+  if (hostname.includes('fb.watch')) {
+    return false;
+  }
+
+  return (
+    pathname.includes('/posts/') ||
+    pathname.includes('/videos/') ||
+    pathname === '/permalink.php' ||
+    pathname.startsWith('/watch') ||
+    pathname === '/plugins/post.php'
+  );
+};
+
+const getVideoUrlValidationError = (value: string) => {
+  try {
+    const parsed = new URL(value);
+    const hostname = parsed.hostname.toLowerCase();
+
+    if (!isSupportedVideoUrl(value)) {
+      return '인스타그램, 틱톡, 페이스북, X 주소만 등록할 수 있습니다.';
+    }
+
+    if (hostname.includes('facebook.com') || hostname.includes('fb.watch')) {
+      if (!isEmbeddableFacebookUrl(parsed)) {
+        return 'Facebook은 임베드 가능한 게시물 URL만 등록할 수 있습니다. 게시물 메뉴의 "임베드 > 고급 설정 > 코드 가져오기"에서 나온 링크를 사용해 주세요.';
+      }
+    }
+
+    return null;
+  } catch {
+    return '올바른 동영상 주소를 입력해 주세요.';
   }
 };
 
@@ -139,8 +188,9 @@ export default function Admin() {
       return;
     }
 
-    if (!isSupportedVideoUrl(trimmedUrl)) {
-      setError('인스타그램 또는 틱톡 주소만 등록할 수 있습니다.');
+    const validationError = getVideoUrlValidationError(trimmedUrl);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -208,10 +258,11 @@ export default function Admin() {
       mapQuery: (settings.mapQuery || settings.addressLine1).trim(),
       phone: settings.phone.trim(),
       email: settings.email.trim(),
-      instagramUrl: settings.instagramUrl.trim() || DEFAULT_SITE_SETTINGS.instagramUrl,
-      facebookUrl: settings.facebookUrl.trim() || DEFAULT_SITE_SETTINGS.facebookUrl,
-      kakaoOpenChatUrl: settings.kakaoOpenChatUrl.trim() || DEFAULT_SITE_SETTINGS.kakaoOpenChatUrl,
-      xUrl: settings.xUrl.trim() || DEFAULT_SITE_SETTINGS.xUrl,
+      instagramUrl: settings.instagramUrl.trim(),
+      tiktokUrl: settings.tiktokUrl.trim(),
+      facebookUrl: settings.facebookUrl.trim(),
+      kakaoOpenChatUrl: settings.kakaoOpenChatUrl.trim(),
+      xUrl: settings.xUrl.trim(),
     };
 
     setSettingsSaving(true);
@@ -222,7 +273,7 @@ export default function Admin() {
       await settingsStorage.saveSettings(payload);
       setSettings(payload);
       setSearchKeyword(payload.mapQuery);
-      setSettingsMessage('영업시간과 오시는길 설정을 저장했습니다.');
+      setSettingsMessage('영업시간과 오시는 길 설정을 저장했습니다.');
     } catch (saveError) {
       console.error('Failed to save site settings:', saveError);
       setSettingsError('설정 저장 중 오류가 발생했습니다. Firestore rules에서 `settings/site` 쓰기 권한을 확인해 주세요.');
@@ -300,7 +351,7 @@ export default function Admin() {
               <TabsList className="h-auto rounded-2xl p-1">
                 <TabsTrigger value="videos" className="cursor-pointer rounded-xl px-5 py-2.5">
                   <VideoIcon className="mr-2 h-4 w-4" />
-                  동영상등록
+                  동영상 등록
                 </TabsTrigger>
                 <TabsTrigger value="settings" className="cursor-pointer rounded-xl px-5 py-2.5">
                   <Settings className="mr-2 h-4 w-4" />
@@ -314,7 +365,7 @@ export default function Admin() {
                 <Card className="shadow-lg">
                   <CardHeader>
                     <CardTitle className="text-2xl">동영상 등록</CardTitle>
-                    <CardDescription>인스타그램 또는 틱톡 게시물 주소를 입력해 갤러리에 등록합니다.</CardDescription>
+                    <CardDescription>인스타그램, 틱톡, 페이스북, X 게시물 주소를 입력해 갤러리에 등록합니다.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleUpload} className="space-y-6">
@@ -330,7 +381,7 @@ export default function Admin() {
 
                       <div className="space-y-2">
                         <Label htmlFor="video-url">동영상 주소</Label>
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
                           <Button type="button" variant="outline" size="sm" className="w-full" asChild>
                             <a href={INSTAGRAM_HOME_URL} target="_blank" rel="noreferrer">
                               <Globe className="mr-2 h-4 w-4" />
@@ -345,9 +396,33 @@ export default function Admin() {
                               <ExternalLink className="ml-2 h-4 w-4" />
                             </a>
                           </Button>
+                          <Button type="button" variant="outline" size="sm" className="w-full" asChild>
+                            <a href={FACEBOOK_HOME_URL} target="_blank" rel="noreferrer">
+                              <Globe className="mr-2 h-4 w-4" />
+                              페이스북 새창 열기
+                              <ExternalLink className="ml-2 h-4 w-4" />
+                            </a>
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" className="w-full" asChild>
+                            <a href={X_HOME_URL} target="_blank" rel="noreferrer">
+                              <Globe className="mr-2 h-4 w-4" />
+                              X 새창 열기
+                              <ExternalLink className="ml-2 h-4 w-4" />
+                            </a>
+                          </Button>
                         </div>
-                        <Input id="video-url" type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://www.instagram.com/reel/... 또는 https://www.tiktok.com/@account/video/..." required />
+                        <Input
+                          id="video-url"
+                          type="url"
+                          value={videoUrl}
+                          onChange={(event) => setVideoUrl(event.target.value)}
+                          placeholder="https://www.instagram.com/reel/... 또는 Facebook 임베드용 게시물 링크"
+                          required
+                        />
                         <p className="text-sm text-muted-foreground">새창에서 게시물 주소를 복사한 뒤 여기에 붙여넣어 주세요.</p>
+                        <p className="text-sm text-amber-600">
+                          Facebook은 게시물 메뉴의 "임베드 &gt; 고급 설정 &gt; 코드 가져오기"에서 나온 링크만 등록할 수 있습니다.
+                        </p>
                       </div>
 
                       {error && (
@@ -408,7 +483,7 @@ export default function Admin() {
             <TabsContent value="settings">
               <Card className="shadow-lg">
                 <CardHeader>
-                  <CardTitle className="text-2xl">오시는길 및 영업시간 설정</CardTitle>
+                  <CardTitle className="text-2xl">오시는 길 및 영업시간 설정</CardTitle>
                   <CardDescription>영업시간을 숫자 입력으로 저장하고 휴무 요일을 체크해서 관리합니다.</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -421,17 +496,32 @@ export default function Admin() {
                           주소검색
                         </Button>
                       </div>
-                      <Input id="address-line-1" value={settings.addressLine1} onChange={(event) => setSettings((prev) => ({ ...prev, addressLine1: event.target.value }))} placeholder="예: 서울 강남구 테헤란로 123" />
+                      <Input
+                        id="address-line-1"
+                        value={settings.addressLine1}
+                        onChange={(event) => setSettings((prev) => ({ ...prev, addressLine1: event.target.value }))}
+                        placeholder="예: 서울 강남구 테헤란로 123"
+                      />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="address-line-2">상세주소</Label>
-                      <Input id="address-line-2" value={settings.addressLine2} onChange={(event) => setSettings((prev) => ({ ...prev, addressLine2: event.target.value }))} placeholder="예: 네일아트 빌딩 2층" />
+                      <Input
+                        id="address-line-2"
+                        value={settings.addressLine2}
+                        onChange={(event) => setSettings((prev) => ({ ...prev, addressLine2: event.target.value }))}
+                        placeholder="예: 네일아트 빌딩 2층"
+                      />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="map-query">지도 검색어</Label>
-                      <Input id="map-query" value={settings.mapQuery} onChange={(event) => setSettings((prev) => ({ ...prev, mapQuery: event.target.value }))} placeholder="지도에 표시할 검색어" />
+                      <Input
+                        id="map-query"
+                        value={settings.mapQuery}
+                        onChange={(event) => setSettings((prev) => ({ ...prev, mapQuery: event.target.value }))}
+                        placeholder="지도에 표시할 검색어"
+                      />
                     </div>
 
                     <div className="grid gap-6 md:grid-cols-2">
@@ -493,6 +583,11 @@ export default function Admin() {
                       <div className="space-y-2">
                         <Label htmlFor="instagram-url">인스타 주소</Label>
                         <Input id="instagram-url" value={settings.instagramUrl} onChange={(event) => setSettings((prev) => ({ ...prev, instagramUrl: event.target.value }))} placeholder="https://instagram.com/..." />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="tiktok-url">틱톡 주소</Label>
+                        <Input id="tiktok-url" value={settings.tiktokUrl} onChange={(event) => setSettings((prev) => ({ ...prev, tiktokUrl: event.target.value }))} placeholder="https://www.tiktok.com/..." />
                       </div>
 
                       <div className="space-y-2">

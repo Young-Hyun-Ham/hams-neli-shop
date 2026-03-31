@@ -1,4 +1,4 @@
-import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
+﻿import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
 import { DEFAULT_SITE_SETTINGS, type SiteSettings, type TimeRange, type Weekday } from './index';
 
@@ -15,6 +15,9 @@ const normalizeTimeRange = (value: Partial<TimeRange> | undefined, fallback: Tim
   endMinute: value?.endMinute || fallback.endMinute,
 });
 
+const normalizeOptionalString = (value: string | null | undefined, fallback: string) =>
+  value ?? fallback;
+
 const normalizeSettings = (value?: Partial<SiteSettings> | null): SiteSettings => ({
   addressLine1: value?.addressLine1 || DEFAULT_SITE_SETTINGS.addressLine1,
   addressLine2: value?.addressLine2 || DEFAULT_SITE_SETTINGS.addressLine2,
@@ -26,10 +29,14 @@ const normalizeSettings = (value?: Partial<SiteSettings> | null): SiteSettings =
   closedDays:
     value?.closedDays?.filter((item): item is Weekday => VALID_WEEKDAYS.includes(item as Weekday)) ||
     DEFAULT_SITE_SETTINGS.closedDays,
-  instagramUrl: value?.instagramUrl || DEFAULT_SITE_SETTINGS.instagramUrl,
-  facebookUrl: value?.facebookUrl || DEFAULT_SITE_SETTINGS.facebookUrl,
-  kakaoOpenChatUrl: value?.kakaoOpenChatUrl || DEFAULT_SITE_SETTINGS.kakaoOpenChatUrl,
-  xUrl: value?.xUrl || DEFAULT_SITE_SETTINGS.xUrl,
+  instagramUrl: normalizeOptionalString(value?.instagramUrl, DEFAULT_SITE_SETTINGS.instagramUrl),
+  tiktokUrl: normalizeOptionalString(value?.tiktokUrl, DEFAULT_SITE_SETTINGS.tiktokUrl),
+  facebookUrl: normalizeOptionalString(value?.facebookUrl, DEFAULT_SITE_SETTINGS.facebookUrl),
+  kakaoOpenChatUrl: normalizeOptionalString(
+    value?.kakaoOpenChatUrl,
+    DEFAULT_SITE_SETTINGS.kakaoOpenChatUrl,
+  ),
+  xUrl: normalizeOptionalString(value?.xUrl, DEFAULT_SITE_SETTINGS.xUrl),
 });
 
 export const settingsStorage = {
