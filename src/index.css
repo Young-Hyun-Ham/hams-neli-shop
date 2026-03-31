@@ -1,0 +1,214 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Playfair+Display:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap");
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+==========================================================================
+【AI HANDOVER NOTE】
+1. DESIGN PHILOSOPHY:
+   - Feminine Elegance with Pastel Softness: 네일아트의 섬세함과 우아함을 표현하는 파스텔 기반 디자인 시스템
+   - Soft Gradient Surfaces: 부드러운 그라데이션과 Glassmorphism 요소로 화사하고 경쾌한 분위기 연출
+   - Bento-style Gallery: 동영상 갤러리는 모듈형 카드 레이아웃으로 시각적 리듬감 제공
+   - Approachable Luxury: 고급스러우면서도 친근한 느낌, 여성 고객층에게 편안함과 신뢰감 전달
+
+2. TYPOGRAPHY:
+   - Noto Sans KR: 한글 가독성이 뛰어나며 부드러운 곡선이 여성스러운 브랜드 이미지와 조화
+   - Playfair Display: 히어로 섹션 및 서비스 타이틀에 사용, 우아하고 클래식한 세리프체로 프리미엄 감성 강조
+   - JetBrains Mono: 관리자 페이지의 코드/데이터 표시용, 기능적 영역과 디자인 영역의 명확한 구분
+
+3. COLOR SYSTEM:
+   - Brand Primary (핑크-라벤더 330°): 네일아트의 대표 색상인 핑크를 현대적으로 재해석, 라벤더 힌트로 세련미 추가
+   - --brand → --primary (메인 CTA, 네비게이션 강조), --accent (호버 상태, 인터랙션), --ring (포커스 링)
+   - Peach Secondary (30°): 따뜻하고 친근한 보조 색상, 서브 섹션 및 카드 배경에 활용
+   - Pastel Muted (280°): 라벤더-그레이 톤으로 텍스트 계층 구조 형성, 과도한 채도 방지
+   - Success (150° 민트그린): 예약 완료, 업로드 성공 등 긍정적 피드백
+   - Warning (45° 피치): 부드러운 주의 메시지, 공격적이지 않은 알림
+   - Destructive (10° 코랄핑크): 삭제 등 위험 동작, 전통적 빨강보다 브랜드 톤에 맞춤
+
+4. USAGE GUIDE:
+   - Layout: Full-width hero with gradient overlay, centered container (max-w-7xl) for content sections
+   - Gallery: Masonry or grid layout with card hover effects (scale + shadow), backdrop-blur on video thumbnails
+   - Glassmorphism: 히어로 배너의 CTA 버튼, 가격표 카드에 backdrop-blur-md + border-white/20 적용
+   - Gradient Accents: background-gradient-to-br from-primary/10 to-secondary/10 for section backgrounds
+   - Rim-light Effect: 카드 상단에 subtle inset shadow (0 1px 0 0 oklch(1 0 0 / 0.5)) for depth
+   - Admin Page: 최소한의 디자인, muted 색상 중심, 기능성 우선
+   - Accessibility: 모든 텍스트는 WCAG AA 이상, 파스텔 배경 위 foreground는 충분한 대비 확보
+   - Korean Typography: line-height 1.7-1.8 for better readability, letter-spacing -0.01em for tighter feel
+==========================================================================
+*/
+
+:root {
+  /* Typography */
+  --font-sans: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+  
+  /* Radius */
+  --radius: 0.75rem;
+
+  /* Core UI Tokens */
+  --background: oklch(0.99 0.005 330);
+  --foreground: oklch(0.20 0.015 330);
+  --card: oklch(0.98 0.01 320);
+  --card-foreground: oklch(0.22 0.015 330);
+  --popover: oklch(0.99 0.008 330);
+  --popover-foreground: oklch(0.20 0.015 330);
+  --primary: oklch(0.68 0.18 330);
+  --primary-foreground: oklch(0.99 0.005 330);
+  --secondary: oklch(0.75 0.12 30);
+  --secondary-foreground: oklch(0.22 0.015 30);
+  --muted: oklch(0.94 0.02 280);
+  --muted-foreground: oklch(0.48 0.03 280);
+  --accent: oklch(0.72 0.15 320);
+  --accent-foreground: oklch(0.99 0.005 320);
+  --destructive: oklch(0.65 0.20 10);
+  --destructive-foreground: oklch(0.99 0.005 10);
+  --border: oklch(0.90 0.015 320);
+  --input: oklch(0.92 0.015 320);
+  --ring: oklch(0.68 0.18 330);
+  
+  /* Chart Tokens */
+  --chart-1: oklch(0.70 0.18 330);
+  --chart-2: oklch(0.72 0.14 30);
+  --chart-3: oklch(0.68 0.12 280);
+  --chart-4: oklch(0.65 0.16 150);
+  --chart-5: oklch(0.62 0.18 200);
+  
+  /* Sidebar Tokens */
+  --sidebar: oklch(0.97 0.01 330);
+  --sidebar-foreground: oklch(0.25 0.015 330);
+  --sidebar-primary: oklch(0.68 0.18 330);
+  --sidebar-primary-foreground: oklch(0.99 0.005 330);
+  --sidebar-accent: oklch(0.72 0.15 320);
+  --sidebar-accent-foreground: oklch(0.22 0.015 320);
+  --sidebar-border: oklch(0.92 0.015 320);
+  --sidebar-ring: oklch(0.68 0.18 330);
+}
+
+.dark {
+  --background: oklch(0.15 0.02 330);
+  --foreground: oklch(0.95 0.01 330);
+  --card: oklch(0.18 0.025 320);
+  --card-foreground: oklch(0.93 0.01 330);
+  --popover: oklch(0.16 0.02 330);
+  --popover-foreground: oklch(0.95 0.01 330);
+  --primary: oklch(0.75 0.20 330);
+  --primary-foreground: oklch(0.15 0.02 330);
+  --secondary: oklch(0.68 0.14 30);
+  --secondary-foreground: oklch(0.15 0.02 30);
+  --muted: oklch(0.25 0.03 280);
+  --muted-foreground: oklch(0.65 0.04 280);
+  --accent: oklch(0.72 0.18 320);
+  --accent-foreground: oklch(0.15 0.02 320);
+  --destructive: oklch(0.70 0.22 10);
+  --destructive-foreground: oklch(0.98 0.01 10);
+  --border: oklch(0.28 0.03 320);
+  --input: oklch(0.26 0.03 320);
+  --ring: oklch(0.75 0.20 330);
+  
+  /* Chart Tokens */
+  --chart-1: oklch(0.75 0.20 330);
+  --chart-2: oklch(0.70 0.16 30);
+  --chart-3: oklch(0.68 0.14 280);
+  --chart-4: oklch(0.72 0.18 150);
+  --chart-5: oklch(0.70 0.20 200);
+  
+  /* Sidebar Tokens */
+  --sidebar: oklch(0.17 0.025 330);
+  --sidebar-foreground: oklch(0.90 0.01 330);
+  --sidebar-primary: oklch(0.75 0.20 330);
+  --sidebar-primary-foreground: oklch(0.15 0.02 330);
+  --sidebar-accent: oklch(0.72 0.18 320);
+  --sidebar-accent-foreground: oklch(0.93 0.01 320);
+  --sidebar-border: oklch(0.26 0.03 320);
+  --sidebar-ring: oklch(0.75 0.20 330);
+}
+
+@theme inline {
+  /* Shadcn Core Mapping */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Charts Mapping */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Sidebar Mapping */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Typography */
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  /* Radius */
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply scroll-smooth antialiased;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans min-h-screen;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+
+  code, pre {
+    @apply font-mono;
+  }
+
+  ::selection {
+    @apply bg-primary/20 text-primary;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40;
+  }
+}
