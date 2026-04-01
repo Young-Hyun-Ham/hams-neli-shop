@@ -6,6 +6,7 @@ import { SiFacebook, SiInstagram, SiKakao, SiTiktok, SiX } from 'react-icons/si'
 import { IMAGES } from '@/assets/images';
 import { PriceCard, ServiceCard, TestimonialCard } from '@/components/Cards';
 import { TestimonialDetailDialog } from '@/components/TestimonialDetailDialog';
+import { ReservationDialog } from '@/components/ReservationDialog';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -32,6 +33,7 @@ export default function Home() {
   const [testimonialItems, setTestimonialItems] = useState<Testimonial[]>(testimonials);
   const [selectedTestimonial, setSelectedTestimonial] = useState<Testimonial | null>(null);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
+  const [reservationOpen, setReservationOpen] = useState(false);
 
   const visibleTestimonials = testimonialItems.slice(0, 9);
   const mapEmbedUrl = useMemo(() => getMapEmbedUrl(siteSettings.mapQuery), [siteSettings.mapQuery]);
@@ -179,9 +181,9 @@ export default function Home() {
               <Button
                 size="lg"
                 className="rounded-2xl px-8 py-6 text-lg shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-xl"
-                asChild
+                onClick={() => setReservationOpen(true)}
               >
-                <a href="#contact">예약하기</a>
+                예약하기
               </Button>
               <Button
                 size="lg"
@@ -434,6 +436,11 @@ export default function Home() {
         open={!!selectedTestimonial}
         onOpenChange={(open) => !open && setSelectedTestimonial(null)}
         showActions={false}
+      />
+      <ReservationDialog
+        open={reservationOpen}
+        onOpenChange={setReservationOpen}
+        siteSettings={siteSettings}
       />
     </Layout>
   );

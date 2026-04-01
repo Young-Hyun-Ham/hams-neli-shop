@@ -32,7 +32,7 @@ export default function Gallery() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-b from-background via-primary/5 to-background py-24">
+      <div className="min-h-screen bg-gradient-to-b from-background via-primary/5 to-background py-6">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

@@ -254,7 +254,7 @@ export default function Review() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-secondary/10 via-background to-primary/10 px-4 py-24">
+      <div className="min-h-screen bg-gradient-to-br from-secondary/10 via-background to-primary/10 px-4 py-6">
         <div className="mx-auto max-w-3xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

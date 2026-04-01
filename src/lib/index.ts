@@ -70,6 +70,16 @@ export interface SiteSettings {
   xUrl: string;
 }
 
+export interface Reservation {
+  id: string;
+  date: string;
+  time: string;
+  name: string;
+  phone: string;
+  status: 'confirmed';
+  createdAt: string;
+}
+
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   addressLine1: '서울 강남구 테헤란로 123',
   addressLine2: '네일아트 빌딩 2층',
