@@ -15,6 +15,14 @@ export interface Video {
   created_at: string;
 }
 
+export interface GalleryImage {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  created_at: string;
+}
+
 export interface Service {
   id: string;
   title: string;

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, Play, Star, Trash2 } from 'lucide-react';
+import { Expand, ExternalLink, Play, Star, Trash2 } from 'lucide-react';
 import { FacebookEmbed } from 'react-social-media-embed';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { PriceItem, Service, Testimonial, Video } from '@/lib/index';
+import type { GalleryImage, PriceItem, Service, Testimonial, Video } from '@/lib/index';
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -348,6 +348,91 @@ export function VideoCard({
                   이 주소는 모달 재생 형식으로 변환할 수 없습니다.
                 </div>
               )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+export function GalleryImageCard({
+  image,
+  onDelete,
+  isAdmin = false,
+}: {
+  image: GalleryImage;
+  onDelete?: (image: GalleryImage) => void | Promise<void>;
+  isAdmin?: boolean;
+}) {
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  return (
+    <>
+      <motion.div
+        variants={cardVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        transition={{ type: 'spring', stiffness: 300, damping: 35 }}
+      >
+        <motion.div
+          variants={hoverLift}
+          initial="rest"
+          whileHover="hover"
+          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+        >
+          <Card className="h-full overflow-hidden border-border/50 shadow-lg transition-shadow hover:shadow-xl">
+            <button
+              type="button"
+              className="group relative block aspect-[4/5] w-full overflow-hidden bg-muted text-left"
+              onClick={() => setIsPreviewOpen(true)}
+            >
+              <img src={image.url} alt={image.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent" />
+              <div className="absolute inset-0 flex items-center justify-center bg-background/20 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="rounded-full bg-background/80 p-3 shadow-md">
+                  <Expand className="h-5 w-5 text-foreground" />
+                </div>
+              </div>
+            </button>
+            <CardHeader>
+              <CardTitle className="line-clamp-2 text-lg font-semibold text-foreground">{image.title}</CardTitle>
+              <CardDescription className="line-clamp-2 text-muted-foreground">{image.description}</CardDescription>
+            </CardHeader>
+            <CardFooter className="flex items-center justify-between gap-3">
+              <span className="text-sm text-muted-foreground">
+                {new Date(image.created_at).toLocaleDateString('ko-KR')}
+              </span>
+              {isAdmin && onDelete && (
+                <Button variant="destructive" size="sm" onClick={() => onDelete(image)}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  삭제
+                </Button>
+              )}
+            </CardFooter>
+          </Card>
+        </motion.div>
+      </motion.div>
+
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-h-[90dvh] w-[calc(100vw-1rem)] max-w-5xl overflow-hidden p-0">
+          <DialogTitle className="sr-only">{image.title}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {image.description || '등록된 이미지를 크게 확인합니다.'}
+          </DialogDescription>
+          <div className="grid max-h-[90dvh] md:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+            <div className="max-h-[45dvh] min-h-[240px] overflow-auto bg-black md:max-h-[90dvh]">
+              <img src={image.url} alt={image.title} className="h-full w-full object-contain" />
+            </div>
+            <div className="max-h-[45dvh] space-y-3 overflow-y-auto p-6 md:max-h-[90dvh]">
+              <h3 className="text-xl font-semibold text-foreground">{image.title}</h3>
+              <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
+                {image.description || '설명이 등록되지 않았습니다.'}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                등록일 {new Date(image.created_at).toLocaleDateString('ko-KR')}
+              </p>
             </div>
           </div>
         </DialogContent>

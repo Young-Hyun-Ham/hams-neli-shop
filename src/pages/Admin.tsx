@@ -4,6 +4,7 @@ import {
   CalendarClock,
   ExternalLink,
   Globe,
+  ImagePlus,
   Loader2,
   Lock,
   MapPinned,
@@ -16,16 +17,18 @@ import {
   Video as VideoIcon,
 } from 'lucide-react';
 import { Layout } from '@/components/Layout';
-import { VideoCard } from '@/components/Cards';
+import { GalleryImageCard, VideoCard } from '@/components/Cards';
 import {
   ADMIN_PASSWORD,
   DEFAULT_SITE_SETTINGS,
+  type GalleryImage,
   type Reservation,
   type SiteSettings,
   type TimeRange,
   type Video,
   type Weekday,
 } from '@/lib/index';
+import { imageStorage } from '@/lib/imageStorage';
 import { reservationStorage } from '@/lib/reservationStorage';
 import { settingsStorage } from '@/lib/settingsStorage';
 import { videoStorage } from '@/lib/videoStorage';
@@ -161,15 +164,25 @@ export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [videos, setVideos] = useState<Video[]>([]);
+  const [images, setImages] = useState<GalleryImage[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+  const [imageTitle, setImageTitle] = useState('');
+  const [imageDescription, setImageDescription] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('');
+  const [imageInputKey, setImageInputKey] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const [loadingVideos, setLoadingVideos] = useState(false);
+  const [loadingImages, setLoadingImages] = useState(false);
   const [loadingReservations, setLoadingReservations] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [imageError, setImageError] = useState('');
+  const [imageSuccess, setImageSuccess] = useState('');
   const [reservationError, setReservationError] = useState('');
   const [reservationMessage, setReservationMessage] = useState('');
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
@@ -215,6 +228,7 @@ export default function Admin() {
     }
 
     void loadVideos();
+    void loadImages();
     void loadSettings();
     const unsubscribeReservations = subscribeReservations();
 
@@ -222,6 +236,20 @@ export default function Admin() {
       unsubscribeReservations();
     };
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreviewUrl('');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(imageFile);
+    setImagePreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [imageFile]);
 
   useEffect(() => {
     setReservationPage(1);
@@ -242,6 +270,19 @@ export default function Admin() {
       setError('동영상 목록을 불러오지 못했습니다. Firebase 설정을 확인해 주세요.');
     } finally {
       setLoadingVideos(false);
+    }
+  };
+
+  const loadImages = async () => {
+    setLoadingImages(true);
+    setImageError('');
+    try {
+      setImages(await imageStorage.getImages());
+    } catch (loadError) {
+      console.error('Failed to load gallery images:', loadError);
+      setImageError('이미지 목록을 불러오지 못했습니다. Firebase 설정을 확인해 주세요.');
+    } finally {
+      setLoadingImages(false);
     }
   };
 
@@ -325,6 +366,56 @@ export default function Admin() {
     } catch (deleteError) {
       console.error('Failed to delete video:', deleteError);
       setError('삭제 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextFile = event.target.files?.[0] ?? null;
+    setImageFile(nextFile);
+    setImageError('');
+  };
+
+  const handleImageUpload = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const trimmedTitle = imageTitle.trim();
+    if (!trimmedTitle || !imageFile) {
+      setImageError('제목과 이미지를 모두 입력해 주세요.');
+      return;
+    }
+
+    setImageUploading(true);
+    setImageError('');
+    setImageSuccess('');
+
+    try {
+      await imageStorage.addImage({
+        file: imageFile,
+        title: trimmedTitle,
+        description: imageDescription.trim(),
+      });
+      setImageSuccess('이미지를 등록했습니다.');
+      setImageTitle('');
+      setImageDescription('');
+      setImageFile(null);
+      setImageInputKey((prev) => prev + 1);
+      await loadImages();
+    } catch (saveError) {
+      console.error('Failed to save gallery image:', saveError);
+      setImageError('이미지 등록 중 오류가 발생했습니다. Firebase 설정을 확인해 주세요.');
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const handleDeleteImage = async (image: GalleryImage) => {
+    try {
+      await imageStorage.deleteImage(image);
+      setImageSuccess('이미지를 삭제했습니다.');
+      await loadImages();
+    } catch (deleteError) {
+      console.error('Failed to delete gallery image:', deleteError);
+      setImageError('이미지 삭제 중 오류가 발생했습니다.');
     }
   };
 
@@ -515,6 +606,7 @@ export default function Admin() {
             <div className="flex justify-center sm:justify-start">
               <TabsList className="h-auto rounded-2xl p-1">
                 <TabsTrigger value="videos" className="cursor-pointer rounded-xl px-5 py-2.5"><VideoIcon className="mr-2 h-4 w-4" />동영상 등록</TabsTrigger>
+                <TabsTrigger value="images" className="cursor-pointer rounded-xl px-5 py-2.5"><ImagePlus className="mr-2 h-4 w-4" />이미지 등록</TabsTrigger>
                 <TabsTrigger value="reservations" className="cursor-pointer rounded-xl px-5 py-2.5"><CalendarClock className="mr-2 h-4 w-4" />예약 현황</TabsTrigger>
                 <TabsTrigger value="settings" className="cursor-pointer rounded-xl px-5 py-2.5"><Settings className="mr-2 h-4 w-4" />설정</TabsTrigger>
               </TabsList>
@@ -554,6 +646,86 @@ export default function Admin() {
                   <CardHeader><CardTitle className="text-2xl">등록된 동영상</CardTitle><CardDescription>현재 등록된 동영상 목록을 확인하고 삭제할 수 있습니다.</CardDescription></CardHeader>
                   <CardContent>
                     {loadingVideos ? <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : videos.length === 0 ? <div className="py-12 text-center text-muted-foreground">등록된 동영상이 없습니다.</div> : <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{videos.map((video) => <VideoCard key={video.id} video={video} onDelete={handleDeleteVideo} isAdmin />)}</div>}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+
+            <TabsContent value="images" className="space-y-8">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="text-2xl">이미지 등록</CardTitle>
+                    <CardDescription>갤러리 이미지 파일을 업로드하고 제목과 설명을 함께 등록합니다.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleImageUpload} className="space-y-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="image-title">제목</Label>
+                        <Input
+                          id="image-title"
+                          value={imageTitle}
+                          onChange={(event) => setImageTitle(event.target.value)}
+                          placeholder="이미지 제목"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="image-description">설명</Label>
+                        <Textarea
+                          id="image-description"
+                          value={imageDescription}
+                          onChange={(event) => setImageDescription(event.target.value)}
+                          placeholder="이미지 설명"
+                          rows={4}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="image-file">이미지 파일</Label>
+                        <Input
+                          key={imageInputKey}
+                          id="image-file"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageFileChange}
+                          required
+                        />
+                        {imagePreviewUrl && (
+                          <div className="overflow-hidden rounded-2xl border border-border/60 bg-muted/30">
+                            <div className="flex aspect-[4/3] items-center justify-center overflow-hidden">
+                              <img src={imagePreviewUrl} alt="업로드 미리보기" className="h-full w-full object-cover" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {imageError && <Alert variant="destructive"><AlertDescription>{imageError}</AlertDescription></Alert>}
+                      {imageSuccess && <Alert className="border-green-200 bg-green-50 text-green-800"><AlertDescription>{imageSuccess}</AlertDescription></Alert>}
+                      <Button type="submit" disabled={imageUploading} className="w-full">
+                        {imageUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />등록 중...</> : <><Upload className="mr-2 h-4 w-4" />이미지 등록</>}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="text-2xl">등록된 이미지</CardTitle>
+                    <CardDescription>현재 갤러리 이미지 목록을 확인하고 삭제할 수 있습니다.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {loadingImages ? (
+                      <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                    ) : images.length === 0 ? (
+                      <div className="py-12 text-center text-muted-foreground">등록된 이미지가 없습니다.</div>
+                    ) : (
+                      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        {images.map((image) => (
+                          <GalleryImageCard key={image.id} image={image} onDelete={handleDeleteImage} isAdmin />
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
