@@ -2,54 +2,54 @@ import { Service, PriceItem, Testimonial } from '@/lib/index';
 import { IMAGES } from '@/assets/images';
 
 export const services: Service[] = [
-  {
-    id: 'service-1',
-    title: '젤 네일 아트',
-    description: '오래 지속되는 아름다운 젤 네일로 당신의 손끝을 화사하게 꾸며드립니다',
-    image: IMAGES.SERVICE_GEL_ART,
-    features: [
-      '2-3주 지속력',
-      '다양한 컬러 선택',
-      '광택 마무리',
-      '손톱 보호 효과'
-    ]
-  },
-  {
-    id: 'service-2',
-    title: '프렌치 매니큐어',
-    description: '클래식하고 우아한 프렌치 스타일로 세련된 손끝을 연출합니다',
-    image: IMAGES.SERVICE_FRENCH_MANICURE,
-    features: [
-      '깔끔한 화이트 팁',
-      '자연스러운 베이스',
-      '어떤 스타일에도 어울림',
-      '오피스룩에 완벽'
-    ]
-  },
-  {
-    id: 'service-3',
-    title: '아트 디자인',
-    description: '개성 넘치는 맞춤형 네일 아트로 특별한 날을 더욱 빛나게 합니다',
-    image: IMAGES.SERVICE_ART_DESIGN,
-    features: [
-      '맞춤형 디자인',
-      '트렌디한 패턴',
-      '스톤 & 글리터 장식',
-      '특별한 날 추천'
-    ]
-  },
-  {
-    id: 'service-4',
-    title: '케어 & 트리트먼트',
-    description: '손톱과 큐티클을 건강하게 관리하는 전문 케어 서비스',
-    image: IMAGES.SERVICE_CARE_TREATMENT,
-    features: [
-      '큐티클 정리',
-      '손톱 영양 공급',
-      '각질 제거',
-      '보습 마사지'
-    ]
-  },
+  // {
+  //   id: 'service-1',
+  //   title: '젤 네일 아트',
+  //   description: '오래 지속되는 아름다운 젤 네일로 당신의 손끝을 화사하게 꾸며드립니다',
+  //   image: IMAGES.SERVICE_1,
+  //   features: [
+  //     '2-3주 지속력',
+  //     '다양한 컬러 선택',
+  //     '광택 마무리',
+  //     '손톱 보호 효과'
+  //   ]
+  // },
+  // {
+  //   id: 'service-2',
+  //   title: '프렌치 매니큐어',
+  //   description: '클래식하고 우아한 프렌치 스타일로 세련된 손끝을 연출합니다',
+  //   image: IMAGES.SERVICE_FRENCH_MANICURE,
+  //   features: [
+  //     '깔끔한 화이트 팁',
+  //     '자연스러운 베이스',
+  //     '어떤 스타일에도 어울림',
+  //     '오피스룩에 완벽'
+  //   ]
+  // },
+  // {
+  //   id: 'service-3',
+  //   title: '아트 디자인',
+  //   description: '개성 넘치는 맞춤형 네일 아트로 특별한 날을 더욱 빛나게 합니다',
+  //   image: IMAGES.SERVICE_10,
+  //   features: [
+  //     '맞춤형 디자인',
+  //     '트렌디한 패턴',
+  //     '스톤 & 글리터 장식',
+  //     '특별한 날 추천'
+  //   ]
+  // },
+  // {
+  //   id: 'service-4',
+  //   title: '케어 & 트리트먼트',
+  //   description: '손톱과 큐티클을 건강하게 관리하는 전문 케어 서비스',
+  //   image: IMAGES.SERVICE_2,
+  //   features: [
+  //     '큐티클 정리',
+  //     '손톱 영양 공급',
+  //     '각질 제거',
+  //     '보습 마사지'
+  //   ]
+  // },
   {
     id: 'service-5',
     title: '대리석 네일',
