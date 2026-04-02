@@ -6,6 +6,7 @@ import {
   getDocs,
   orderBy,
   query,
+  updateDoc,
 } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import type { GalleryImage } from './index';
@@ -16,6 +17,7 @@ const IMAGES_COLLECTION = 'galleryImages';
 type CreateGalleryImageInput = Omit<GalleryImage, 'id' | 'created_at' | 'url'> & {
   file: File;
 };
+type UpdateGalleryImageInput = Pick<GalleryImage, 'title' | 'description' | 'visible'>;
 
 const assertFirebaseConfigured = () => {
   if (!isFirebaseConfigured) {
@@ -53,12 +55,13 @@ export const imageStorage = {
     const snapshot = await getDocs(imagesQuery);
 
     return snapshot.docs.map((snapshotDoc) => ({
-      id: snapshotDoc.id,
       ...(snapshotDoc.data() as Omit<GalleryImage, 'id'>),
+      id: snapshotDoc.id,
+      visible: (snapshotDoc.data() as Omit<GalleryImage, 'id'>).visible ?? true,
     }));
   },
 
-  async addImage({ file, title, description }: CreateGalleryImageInput): Promise<GalleryImage> {
+  async addImage({ file, title, description, visible }: CreateGalleryImageInput): Promise<GalleryImage> {
     assertFirebaseConfigured();
 
     const url = await uploadImageFile(file);
@@ -68,6 +71,7 @@ export const imageStorage = {
       description,
       url,
       created_at,
+      visible: visible ?? true,
     });
 
     return {
@@ -76,7 +80,13 @@ export const imageStorage = {
       description,
       url,
       created_at,
+      visible: visible ?? true,
     };
+  },
+
+  async updateImage(id: string, updates: UpdateGalleryImageInput): Promise<void> {
+    assertFirebaseConfigured();
+    await updateDoc(doc(db, IMAGES_COLLECTION, id), { ...updates, visible: updates.visible ?? true });
   },
 
   async deleteImage(image: GalleryImage): Promise<void> {

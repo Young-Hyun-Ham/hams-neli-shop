@@ -6,6 +6,7 @@ import {
   getDocs,
   orderBy,
   query,
+  updateDoc,
 } from 'firebase/firestore';
 import type { Video } from './index';
 import { db, isFirebaseConfigured } from './firebase';
@@ -13,6 +14,7 @@ import { db, isFirebaseConfigured } from './firebase';
 const VIDEOS_COLLECTION = 'videos';
 
 type CreateVideoInput = Omit<Video, 'id' | 'created_at'>;
+type UpdateVideoInput = Omit<Video, 'id' | 'created_at'>;
 
 const assertFirebaseConfigured = () => {
   if (!isFirebaseConfigured) {
@@ -31,8 +33,9 @@ export const videoStorage = {
     const snapshot = await getDocs(videosQuery);
 
     return snapshot.docs.map((snapshotDoc) => ({
-      id: snapshotDoc.id,
       ...(snapshotDoc.data() as Omit<Video, 'id'>),
+      id: snapshotDoc.id,
+      visible: (snapshotDoc.data() as Omit<Video, 'id'>).visible ?? true,
     }));
   },
 
@@ -43,13 +46,20 @@ export const videoStorage = {
     const docRef = await addDoc(collection(db, VIDEOS_COLLECTION), {
       ...video,
       created_at,
+      visible: video.visible ?? true,
     });
 
     return {
       id: docRef.id,
       ...video,
       created_at,
+      visible: video.visible ?? true,
     };
+  },
+
+  async updateVideo(id: string, updates: UpdateVideoInput): Promise<void> {
+    assertFirebaseConfigured();
+    await updateDoc(doc(db, VIDEOS_COLLECTION, id), { ...updates, visible: updates.visible ?? true });
   },
 
   async deleteVideo(id: string): Promise<void> {

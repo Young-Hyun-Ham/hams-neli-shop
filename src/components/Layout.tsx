@@ -24,6 +24,8 @@ type NavItem = {
   sectionId?: (typeof HOME_SECTION_IDS)[number];
 };
 
+export const HOME_LOGO_TITLE = "Yu-mi Studio";
+
 export function Layout({ children }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('');
@@ -144,6 +146,11 @@ export function Layout({ children }: LayoutProps) {
     sessionStorage.removeItem(REVIEW_EDIT_DRAFT_KEY);
   };
 
+  const handleHomeClick = () => {
+    setActiveSection('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const getNavClassName = (active: boolean) =>
     `cursor-pointer font-medium transition-colors duration-200 ${
       active ? 'text-primary' : 'text-foreground/80 hover:text-primary'
@@ -165,12 +172,21 @@ export function Layout({ children }: LayoutProps) {
       <header className="fixed top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
-            <Link to={ROUTE_PATHS.HOME} className="flex items-center space-x-2">
+            <Link
+              to={ROUTE_PATHS.HOME}
+              className="flex items-center space-x-2"
+              onClick={(event) => {
+                if (location.pathname === ROUTE_PATHS.HOME) {
+                  event.preventDefault();
+                  handleHomeClick();
+                }
+              }}
+            >
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary">
                 <span className="text-lg font-bold text-white">N</span>
               </div>
               <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-xl font-semibold text-transparent">
-                네일아트 스튜디오
+                {HOME_LOGO_TITLE}
               </span>
             </Link>
 
@@ -189,7 +205,13 @@ export function Layout({ children }: LayoutProps) {
                   <NavLink
                     key={item.to}
                     to={item.to}
-                    onClick={() => {
+                    onClick={(event) => {
+                      if (item.homeOnly && location.pathname === ROUTE_PATHS.HOME) {
+                        event.preventDefault();
+                        handleHomeClick();
+                        return;
+                      }
+
                       if (item.to === ROUTE_PATHS.REVIEW) {
                         handleReviewClick();
                       }
@@ -242,7 +264,14 @@ export function Layout({ children }: LayoutProps) {
                     <NavLink
                       key={item.to}
                       to={item.to}
-                      onClick={() => {
+                      onClick={(event) => {
+                        if (item.homeOnly && location.pathname === ROUTE_PATHS.HOME) {
+                          event.preventDefault();
+                          handleHomeClick();
+                          setMobileMenuOpen(false);
+                          return;
+                        }
+
                         if (item.to === ROUTE_PATHS.REVIEW) {
                           handleReviewClick();
                         }
@@ -272,7 +301,7 @@ export function Layout({ children }: LayoutProps) {
                   <span className="text-lg font-bold text-white">N</span>
                 </div>
                 <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-xl font-semibold text-transparent">
-                  네일아트 스튜디오
+                  {HOME_LOGO_TITLE}
                 </span>
               </div>
               <p className="text-sm leading-relaxed text-muted-foreground">
@@ -321,7 +350,7 @@ export function Layout({ children }: LayoutProps) {
 
           <div className="mt-8 border-t border-border pt-8 text-center">
             <p className="text-sm text-muted-foreground">
-              © 2026 네일아트 스튜디오. All rights reserved.
+              © 2026 {HOME_LOGO_TITLE}. All rights reserved.
             </p>
           </div>
         </div>

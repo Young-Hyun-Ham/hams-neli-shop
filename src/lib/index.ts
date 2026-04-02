@@ -13,6 +13,7 @@ export interface Video {
   url: string;
   thumbnail?: string;
   created_at: string;
+  visible?: boolean;
 }
 
 export interface GalleryImage {
@@ -21,6 +22,7 @@ export interface GalleryImage {
   description: string;
   url: string;
   created_at: string;
+  visible?: boolean;
 }
 
 export interface Service {
@@ -29,6 +31,7 @@ export interface Service {
   description: string;
   image: string;
   features: string[];
+  visible?: boolean;
 }
 
 export interface PriceItem {
@@ -38,6 +41,7 @@ export interface PriceItem {
   price: string;
   duration?: string;
   description?: string;
+  visible?: boolean;
 }
 
 export interface Testimonial {
@@ -113,5 +117,3 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   kakaoOpenChatUrl: 'https://open.kakao.com/',
   xUrl: 'https://x.com',
 };
-
-export const ADMIN_PASSWORD = '1234';

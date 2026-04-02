@@ -109,7 +109,7 @@ export default function Gallery() {
                   transition={{ delay: 0.2 }}
                   className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3"
                 >
-                  {videos.map((video, index) => (
+                  {videos.filter((video) => video.visible !== false).map((video, index) => (
                     <motion.div
                       key={video.id}
                       initial={{ opacity: 0, y: 30 }}
@@ -153,7 +153,7 @@ export default function Gallery() {
                   transition={{ delay: 0.2 }}
                   className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3"
                 >
-                  {images.map((image, index) => (
+                  {images.filter((image) => image.visible !== false).map((image, index) => (
                     <motion.div
                       key={image.id}
                       initial={{ opacity: 0, y: 30 }}

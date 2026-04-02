@@ -4,9 +4,12 @@ import { DEFAULT_SITE_SETTINGS, type SiteSettings, type TimeRange, type Weekday 
 
 const SETTINGS_COLLECTION = 'settings';
 const SITE_SETTINGS_DOC = 'site';
+const ADMIN_SETTINGS_DOC = 'admin';
 const VALID_WEEKDAYS: Weekday[] = ['월', '화', '수', '목', '금', '토', '일'];
+const DEFAULT_ADMIN_PASSWORD = 'admin1234';
 
 const getSettingsDocRef = () => doc(db, SETTINGS_COLLECTION, SITE_SETTINGS_DOC);
+const getAdminDocRef = () => doc(db, SETTINGS_COLLECTION, ADMIN_SETTINGS_DOC);
 
 const normalizeTimeRange = (value: Partial<TimeRange> | undefined, fallback: TimeRange): TimeRange => ({
   startHour: value?.startHour || fallback.startHour,
@@ -38,6 +41,14 @@ const normalizeSettings = (value?: Partial<SiteSettings> | null): SiteSettings =
   ),
   xUrl: normalizeOptionalString(value?.xUrl, DEFAULT_SITE_SETTINGS.xUrl),
 });
+
+const hashPassword = async (value: string) => {
+  const data = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+};
 
 export const settingsStorage = {
   async getSettings(): Promise<SiteSettings> {
@@ -84,5 +95,47 @@ export const settingsStorage = {
     }
 
     await setDoc(getSettingsDocRef(), normalizeSettings(settings), { merge: true });
+  },
+
+  async getAdminPasswordHash(): Promise<string> {
+    const fallbackHash = await hashPassword(DEFAULT_ADMIN_PASSWORD);
+
+    if (!isFirebaseConfigured) {
+      return fallbackHash;
+    }
+
+    const snapshot = await getDoc(getAdminDocRef());
+    if (!snapshot.exists()) {
+      return fallbackHash;
+    }
+
+    const value = snapshot.data() as { pwd?: string };
+    return value.pwd || fallbackHash;
+  },
+
+  async verifyAdminPassword(password: string): Promise<boolean> {
+    const [inputHash, savedHash] = await Promise.all([
+      hashPassword(password),
+      this.getAdminPasswordHash(),
+    ]);
+
+    return inputHash === savedHash;
+  },
+
+  async updateAdminPassword(password: string): Promise<void> {
+    const pwd = await hashPassword(password);
+
+    if (!isFirebaseConfigured) {
+      return;
+    }
+
+    await setDoc(
+      getAdminDocRef(),
+      {
+        pwd,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true },
+    );
   },
 };

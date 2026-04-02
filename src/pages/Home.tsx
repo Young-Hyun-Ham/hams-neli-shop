@@ -7,15 +7,20 @@ import { IMAGES } from '@/assets/images';
 import { PriceCard, ServiceCard, TestimonialCard } from '@/components/Cards';
 import { TestimonialDetailDialog } from '@/components/TestimonialDetailDialog';
 import { ReservationDialog } from '@/components/ReservationDialog';
-import { Layout } from '@/components/Layout';
+import { HOME_LOGO_TITLE, Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { priceItems, services, testimonials } from '@/data/index';
+import { priceItems as fallbackPrices, services as fallbackServices, testimonials } from '@/data/index';
 import { DEFAULT_SITE_SETTINGS, ROUTE_PATHS, type SiteSettings, type Testimonial } from '@/lib/index';
+import type { PriceItem, Service } from '@/lib/index';
+import { priceStorage } from '@/lib/priceStorage';
+import { serviceStorage } from '@/lib/serviceStorage';
 import { settingsStorage } from '@/lib/settingsStorage';
 import { testimonialStorage } from '@/lib/testimonialStorage';
 
 const PENDING_SCROLL_KEY = 'pending-home-scroll-target';
+const SERVICES_CACHE_KEY = 'home-services-cache';
+const PRICES_CACHE_KEY = 'home-prices-cache';
 const hasVisibleSocialLink = (value: string) => value.trim().length > 0;
 
 const getMapEmbedUrl = (query: string) =>
@@ -29,7 +34,88 @@ const formatTimeRange = (
   endMinute: string,
 ) => `${label} ${startHour}:${startMinute} - ${endHour}:${endMinute}`;
 
+const readCachedServices = (): Service[] => {
+  if (typeof window === 'undefined') {
+    return fallbackServices;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(SERVICES_CACHE_KEY);
+    if (!raw) {
+      return fallbackServices;
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return fallbackServices;
+    }
+
+    const items = parsed.filter(
+      (item): item is Service =>
+        Boolean(item) &&
+        typeof item.id === 'string' &&
+        typeof item.title === 'string' &&
+        typeof item.description === 'string' &&
+        typeof item.image === 'string' &&
+        Array.isArray(item.features),
+    );
+
+    return items.length > 0 ? items : fallbackServices;
+  } catch {
+    return fallbackServices;
+  }
+};
+
+const persistServices = (items: Service[]) => {
+  if (typeof window === 'undefined' || items.length === 0) {
+    return;
+  }
+
+  window.localStorage.setItem(SERVICES_CACHE_KEY, JSON.stringify(items));
+};
+
+const readCachedPrices = (): PriceItem[] => {
+  if (typeof window === 'undefined') {
+    return fallbackPrices;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(PRICES_CACHE_KEY);
+    if (!raw) {
+      return fallbackPrices;
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return fallbackPrices;
+    }
+
+    const items = parsed.filter(
+      (item): item is PriceItem =>
+        Boolean(item) &&
+        typeof item.id === 'string' &&
+        typeof item.category === 'string' &&
+        typeof item.name === 'string' &&
+        typeof item.price === 'string',
+    );
+
+    return items.length > 0 ? items : fallbackPrices;
+  } catch {
+    return fallbackPrices;
+  }
+};
+
+const persistPrices = (items: PriceItem[]) => {
+  if (typeof window === 'undefined' || items.length === 0) {
+    return;
+  }
+
+  window.localStorage.setItem(PRICES_CACHE_KEY, JSON.stringify(items));
+};
+
 export default function Home() {
+  const [serviceItems, setServiceItems] = useState<Service[]>(readCachedServices);
+  const [priceList, setPriceList] = useState<PriceItem[]>(readCachedPrices);
   const [testimonialItems, setTestimonialItems] = useState<Testimonial[]>(testimonials);
   const [selectedTestimonial, setSelectedTestimonial] = useState<Testimonial | null>(null);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
@@ -71,6 +157,38 @@ export default function Home() {
     [siteSettings],
   );
 
+  const syncServices = async (cancelledRef?: { current: boolean }) => {
+    try {
+      const data = await serviceStorage.getServices();
+      if (!cancelledRef?.current) {
+        const nextItems = data.length > 0 ? data : readCachedServices();
+        persistServices(nextItems);
+        setServiceItems(nextItems);
+      }
+    } catch (error) {
+      console.error('Failed to load services:', error);
+      if (!cancelledRef?.current) {
+        setServiceItems(readCachedServices());
+      }
+    }
+  };
+
+  const syncPrices = async (cancelledRef?: { current: boolean }) => {
+    try {
+      const data = await priceStorage.getPrices();
+      if (!cancelledRef?.current) {
+        const nextItems = data.length > 0 ? data : readCachedPrices();
+        persistPrices(nextItems);
+        setPriceList(nextItems);
+      }
+    } catch (error) {
+      console.error('Failed to load prices:', error);
+      if (!cancelledRef?.current) {
+        setPriceList(readCachedPrices());
+      }
+    }
+  };
+
   useEffect(() => {
     const targetId = sessionStorage.getItem(PENDING_SCROLL_KEY);
     if (!targetId) {
@@ -98,8 +216,60 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    let unsubscribeServices = () => {};
+    let unsubscribePrices = () => {};
     let unsubscribeTestimonials = () => {};
     let unsubscribeSettings = () => {};
+    const cancelledRef = { current: false };
+
+    void syncServices(cancelledRef);
+    void syncPrices(cancelledRef);
+
+    try {
+      unsubscribeServices = serviceStorage.subscribeServices(
+        (data) => {
+          if (!cancelledRef.current) {
+            const nextItems = data.length > 0 ? data : readCachedServices();
+            persistServices(nextItems);
+            setServiceItems(nextItems);
+          }
+        },
+        (error) => {
+          console.error('Failed to subscribe services:', error);
+          if (!cancelledRef.current) {
+            setServiceItems(readCachedServices());
+          }
+        },
+      );
+    } catch (error) {
+      console.error('Failed to initialize service subscription:', error);
+      if (!cancelledRef.current) {
+        setServiceItems(readCachedServices());
+      }
+    }
+
+    try {
+      unsubscribePrices = priceStorage.subscribePrices(
+        (data) => {
+          if (!cancelledRef.current) {
+            const nextItems = data.length > 0 ? data : readCachedPrices();
+            persistPrices(nextItems);
+            setPriceList(nextItems);
+          }
+        },
+        (error) => {
+          console.error('Failed to subscribe prices:', error);
+          if (!cancelledRef.current) {
+            setPriceList(readCachedPrices());
+          }
+        },
+      );
+    } catch (error) {
+      console.error('Failed to initialize price subscription:', error);
+      if (!cancelledRef.current) {
+        setPriceList(readCachedPrices());
+      }
+    }
 
     try {
       unsubscribeTestimonials = testimonialStorage.subscribeTestimonials(
@@ -131,7 +301,27 @@ export default function Home() {
       setSiteSettings(DEFAULT_SITE_SETTINGS);
     }
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void syncServices(cancelledRef);
+        void syncPrices(cancelledRef);
+      }
+    };
+
+    const handleWindowFocus = () => {
+      void syncServices(cancelledRef);
+      void syncPrices(cancelledRef);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleWindowFocus);
+
     return () => {
+      cancelledRef.current = true;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleWindowFocus);
+      unsubscribeServices();
+      unsubscribePrices();
       unsubscribeTestimonials();
       unsubscribeSettings();
     };
@@ -211,7 +401,7 @@ export default function Home() {
             viewport={{ once: true }}
             transition={{ type: 'spring', stiffness: 300, damping: 35 }}
           >
-            <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">프리미엄 서비스</h2>
+            <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">{HOME_LOGO_TITLE} 서비스</h2>
             <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
               전문 케어와 감각적인 디자인으로 완성하는 맞춤 네일 케어
             </p>
@@ -224,7 +414,7 @@ export default function Home() {
             whileInView="animate"
             viewport={{ once: true }}
           >
-            {services.map((service) => (
+            {serviceItems.filter((service) => service.visible !== false).map((service) => (
               <motion.div key={service.id} variants={fadeInUp}>
                 <ServiceCard service={service} />
               </motion.div>
@@ -255,7 +445,7 @@ export default function Home() {
             whileInView="animate"
             viewport={{ once: true }}
           >
-            {priceItems.map((item) => (
+            {priceList.filter((item) => item.visible !== false).map((item) => (
               <motion.div key={item.id} variants={fadeInUp}>
                 <PriceCard item={item} />
               </motion.div>
@@ -418,7 +608,7 @@ export default function Home() {
                 </div>
                 <div className="flex-1">
                   <iframe
-                    title="네일아트 스튜디오 위치"
+                    title={`${HOME_LOGO_TITLE} 위치`}
                     src={mapEmbedUrl}
                     className="h-full min-h-full w-full border-0"
                     loading="lazy"

@@ -78,7 +78,7 @@ export default function Testimonials() {
           >
             <h1 className="text-4xl font-bold text-foreground md:text-5xl">고객후기</h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-              등록된 고객후기를 12개씩 나누어 확인할 수 있습니다.
+              등록된 고객후기 확인할 수 있습니다.
             </p>
           </motion.div>
 

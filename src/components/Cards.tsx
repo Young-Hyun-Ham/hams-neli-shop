@@ -111,7 +111,7 @@ export function ServiceCard({ service }: { service: Service }) {
           </div>
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-foreground">{service.title}</CardTitle>
-            <CardDescription className="text-muted-foreground">{service.description}</CardDescription>
+            <CardDescription className="whitespace-pre-line text-muted-foreground">{service.description}</CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
@@ -153,7 +153,7 @@ export function PriceCard({ item }: { item: PriceItem }) {
                 </Badge>
                 <CardTitle className="text-xl font-semibold text-foreground">{item.name}</CardTitle>
                 {item.description && (
-                  <CardDescription className="mt-2 text-muted-foreground">{item.description}</CardDescription>
+                  <CardDescription className="mt-2 whitespace-pre-line text-muted-foreground">{item.description}</CardDescription>
                 )}
               </div>
               <div className="text-right">
