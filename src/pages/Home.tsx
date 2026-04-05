@@ -11,16 +11,26 @@ import { HOME_LOGO_TITLE, Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { priceItems as fallbackPrices, services as fallbackServices, testimonials } from '@/data/index';
-import { DEFAULT_SITE_SETTINGS, ROUTE_PATHS, type SiteSettings, type Testimonial } from '@/lib/index';
+import {
+  DEFAULT_SITE_SETTINGS,
+  ROUTE_PATHS,
+  type EventItem,
+  type SiteSettings,
+  type Testimonial,
+} from '@/lib/index';
+import { DEFAULT_EVENT_ITEMS, eventStorage, isEventActive } from '@/lib/eventStorage';
 import type { PriceItem, Service } from '@/lib/index';
 import { priceStorage } from '@/lib/priceStorage';
 import { serviceStorage } from '@/lib/serviceStorage';
 import { settingsStorage } from '@/lib/settingsStorage';
 import { testimonialStorage } from '@/lib/testimonialStorage';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const PENDING_SCROLL_KEY = 'pending-home-scroll-target';
 const SERVICES_CACHE_KEY = 'home-services-cache';
 const PRICES_CACHE_KEY = 'home-prices-cache';
+const EVENT_MODAL_DISMISS_PREFIX = 'dismissed-home-event-until:';
+const EVENT_MODAL_DISMISS_DURATION_MS = 24 * 60 * 60 * 1000;
 const hasVisibleSocialLink = (value: string) => value.trim().length > 0;
 
 const getMapEmbedUrl = (query: string) =>
@@ -120,9 +130,15 @@ export default function Home() {
   const [selectedTestimonial, setSelectedTestimonial] = useState<Testimonial | null>(null);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
   const [reservationOpen, setReservationOpen] = useState(false);
+  const [events, setEvents] = useState<EventItem[]>(DEFAULT_EVENT_ITEMS);
+  const [eventModalOpen, setEventModalOpen] = useState(false);
 
   const visibleTestimonials = testimonialItems.slice(0, 9);
   const mapEmbedUrl = useMemo(() => getMapEmbedUrl(siteSettings.mapQuery), [siteSettings.mapQuery]);
+  const activeEvent = useMemo(
+    () => events.find((event) => isEventActive(event)),
+    [events],
+  );
 
   const businessHoursLines = useMemo(
     () => [
@@ -220,6 +236,7 @@ export default function Home() {
     let unsubscribePrices = () => {};
     let unsubscribeTestimonials = () => {};
     let unsubscribeSettings = () => {};
+    let unsubscribeEvents = () => {};
     const cancelledRef = { current: false };
 
     void syncServices(cancelledRef);
@@ -287,6 +304,21 @@ export default function Home() {
     }
 
     try {
+      unsubscribeEvents = eventStorage.subscribeEvents(
+        (data) => {
+          setEvents(data.length > 0 ? data : DEFAULT_EVENT_ITEMS);
+        },
+        (error) => {
+          console.error('Failed to subscribe events:', error);
+          setEvents(DEFAULT_EVENT_ITEMS);
+        },
+      );
+    } catch (error) {
+      console.error('Failed to initialize event subscription:', error);
+      setEvents(DEFAULT_EVENT_ITEMS);
+    }
+
+    try {
       unsubscribeSettings = settingsStorage.subscribeSettings(
         (settings) => {
           setSiteSettings(settings);
@@ -323,9 +355,41 @@ export default function Home() {
       unsubscribeServices();
       unsubscribePrices();
       unsubscribeTestimonials();
+      unsubscribeEvents();
       unsubscribeSettings();
     };
   }, []);
+
+  useEffect(() => {
+    if (!activeEvent || typeof window === 'undefined') {
+      setEventModalOpen(false);
+      return;
+    }
+
+    const dismissedKey = `${EVENT_MODAL_DISMISS_PREFIX}${activeEvent.id}`;
+    const dismissedUntil = Number(window.localStorage.getItem(dismissedKey) || '0');
+
+    if (dismissedUntil > Date.now()) {
+      setEventModalOpen(false);
+      return;
+    }
+
+    window.localStorage.removeItem(dismissedKey);
+    setEventModalOpen(true);
+  }, [activeEvent]);
+
+  const handleDismissEventForOneDay = () => {
+    if (!activeEvent || typeof window === 'undefined') {
+      setEventModalOpen(false);
+      return;
+    }
+
+    window.localStorage.setItem(
+      `${EVENT_MODAL_DISMISS_PREFIX}${activeEvent.id}`,
+      String(Date.now() + EVENT_MODAL_DISMISS_DURATION_MS),
+    );
+    setEventModalOpen(false);
+  };
 
   const fadeInUp = {
     initial: { opacity: 0, y: 24 },
@@ -422,7 +486,8 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
-
+      
+      {priceList.filter((item) => item.visible !== false).length > 0 && (
       <section id="pricing" className="bg-gradient-to-b from-muted/20 to-background py-24">
         <div className="container mx-auto px-4">
           <motion.div
@@ -453,7 +518,9 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
+      )}
 
+      {visibleTestimonials.length > 0 && (
       <section id="testimonials" className="bg-gradient-to-b from-background to-muted/20 py-24">
         <div className="container mx-auto px-4">
           <motion.div
@@ -490,6 +557,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
       <section id="contact" className="bg-gradient-to-b from-muted/20 to-background py-24">
         <div className="container mx-auto px-4">
@@ -632,6 +700,42 @@ export default function Home() {
         onOpenChange={setReservationOpen}
         siteSettings={siteSettings}
       />
+      {activeEvent ? (
+        <Dialog open={eventModalOpen} onOpenChange={setEventModalOpen}>
+          <DialogContent className="overflow-hidden border-0 p-0 sm:max-w-xl">
+            <div className="relative">
+              <img src={activeEvent.image || IMAGES.GALLERY_10} alt={activeEvent.title} className="h-64 w-full object-cover sm:h-72" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-6 text-white">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.35em] text-white/80">Special Event</p>
+                <h2 className="text-3xl font-bold">{activeEvent.title}</h2>
+                <p className="mt-2 text-sm text-white/85">
+                  {activeEvent.startDate} ~ {activeEvent.endDate}
+                </p>
+              </div>
+            </div>
+            <div className="space-y-5 p-6">
+              <DialogHeader className="space-y-3 text-left">
+                <DialogTitle className="text-2xl">첫 방문 혜택 안내</DialogTitle>
+                <DialogDescription className="text-base leading-7 text-muted-foreground">
+                  {activeEvent.content}
+                </DialogDescription>
+              </DialogHeader>
+              <Button asChild className="w-full rounded-2xl py-6 text-base">
+                <Link to={ROUTE_PATHS.EVENTS}>이벤트 자세히 보기</Link>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDismissEventForOneDay}
+                className="w-full rounded-xl border-primary/30 bg-background text-sm font-medium text-muted-foreground hover:bg-primary/5 hover:text-foreground"
+              >
+                하루동안열지않기
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </Layout>
   );
 }

@@ -1,10 +1,22 @@
 ﻿export const ROUTE_PATHS = {
   HOME: '/',
+  EVENTS: '/events',
   GALLERY: '/gallery',
   TESTIMONIALS: '/testimonials',
   REVIEW: '/review',
   ADMIN: '/admin',
 } as const;
+
+export interface EventItem {
+  id: string;
+  title: string;
+  content: string;
+  image: string;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+  visible?: boolean;
+}
 
 export interface Video {
   id: string;
@@ -21,6 +33,17 @@ export interface GalleryImage {
   title: string;
   description: string;
   url: string;
+  categoryId?: string;
+  categoryName?: string;
+  created_at: string;
+  visible?: boolean;
+}
+
+export interface GalleryCategory {
+  id: string;
+  name: string;
+  description?: string;
+  image?: string;
   created_at: string;
   visible?: boolean;
 }
@@ -88,6 +111,8 @@ export interface Reservation {
   time: string;
   name: string;
   phone: string;
+  serviceId?: string;
+  serviceName?: string;
   status: 'confirmed';
   createdAt: string;
 }

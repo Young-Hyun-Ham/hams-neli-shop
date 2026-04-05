@@ -15,9 +15,12 @@ import { db, isFirebaseConfigured, storage } from './firebase';
 const IMAGES_COLLECTION = 'galleryImages';
 
 type CreateGalleryImageInput = Omit<GalleryImage, 'id' | 'created_at' | 'url'> & {
-  file: File;
+  file?: File;
+  url?: string;
 };
-type UpdateGalleryImageInput = Pick<GalleryImage, 'title' | 'description' | 'visible'>;
+type UpdateGalleryImageInput = Pick<GalleryImage, 'title' | 'description' | 'url' | 'categoryId' | 'categoryName' | 'visible'> & {
+  previousUrl?: string;
+};
 
 const assertFirebaseConfigured = () => {
   if (!isFirebaseConfigured) {
@@ -44,6 +47,18 @@ const uploadImageFile = async (file: File) => {
   return getDownloadURL(storageRef);
 };
 
+const deleteStoredImage = async (url?: string) => {
+  if (!url) {
+    return;
+  }
+
+  try {
+    await deleteObject(ref(storage, url));
+  } catch (error) {
+    console.error('Failed to delete gallery image file:', error);
+  }
+};
+
 export const imageStorage = {
   async getImages(): Promise<GalleryImage[]> {
     assertFirebaseConfigured();
@@ -61,15 +76,21 @@ export const imageStorage = {
     }));
   },
 
-  async addImage({ file, title, description, visible }: CreateGalleryImageInput): Promise<GalleryImage> {
+  async uploadImage(file: File): Promise<string> {
+    return uploadImageFile(file);
+  },
+
+  async addImage({ file, url, title, description, categoryId, categoryName, visible }: CreateGalleryImageInput): Promise<GalleryImage> {
     assertFirebaseConfigured();
 
-    const url = await uploadImageFile(file);
+    const nextUrl = file ? await uploadImageFile(file) : url || '';
     const created_at = new Date().toISOString();
     const docRef = await addDoc(collection(db, IMAGES_COLLECTION), {
       title,
       description,
-      url,
+      url: nextUrl,
+      categoryId: categoryId || '',
+      categoryName: categoryName || '',
       created_at,
       visible: visible ?? true,
     });
@@ -78,7 +99,9 @@ export const imageStorage = {
       id: docRef.id,
       title,
       description,
-      url,
+      url: nextUrl,
+      categoryId: categoryId || '',
+      categoryName: categoryName || '',
       created_at,
       visible: visible ?? true,
     };
@@ -86,17 +109,20 @@ export const imageStorage = {
 
   async updateImage(id: string, updates: UpdateGalleryImageInput): Promise<void> {
     assertFirebaseConfigured();
-    await updateDoc(doc(db, IMAGES_COLLECTION, id), { ...updates, visible: updates.visible ?? true });
+
+    const { previousUrl, ...payload } = updates;
+
+    if (previousUrl && previousUrl !== payload.url) {
+      await deleteStoredImage(previousUrl);
+    }
+
+    await updateDoc(doc(db, IMAGES_COLLECTION, id), { ...payload, visible: payload.visible ?? true });
   },
 
   async deleteImage(image: GalleryImage): Promise<void> {
     assertFirebaseConfigured();
 
-    try {
-      await deleteObject(ref(storage, image.url));
-    } catch (error) {
-      console.error('Failed to delete gallery image file:', error);
-    }
+    await deleteStoredImage(image.url);
 
     await deleteDoc(doc(db, IMAGES_COLLECTION, image.id));
   },

@@ -30,6 +30,8 @@ const normalizeReservation = (
   time: value.time || '',
   name: value.name || '',
   phone: value.phone || '',
+  serviceId: value.serviceId || '',
+  serviceName: value.serviceName || '',
   status: 'confirmed',
   createdAt:
     value.createdAt instanceof Timestamp
@@ -101,7 +103,14 @@ export const reservationStorage = {
     );
   },
 
-  async createReservation(date: string, time: string, name: string, phone: string): Promise<void> {
+  async createReservation(
+    date: string,
+    time: string,
+    name: string,
+    phone: string,
+    serviceId?: string,
+    serviceName?: string,
+  ): Promise<void> {
     if (!isFirebaseConfigured) {
       const existingReservation = readLocalReservations().find(
         (item) => item.date === date && item.time === time,
@@ -116,6 +125,8 @@ export const reservationStorage = {
         time,
         name,
         phone,
+        serviceId,
+        serviceName,
         createdAt: new Date().toISOString(),
       });
 
@@ -142,6 +153,8 @@ export const reservationStorage = {
         time,
         name,
         phone,
+        serviceId: serviceId || '',
+        serviceName: serviceName || '',
         status: 'confirmed',
         createdAt: serverTimestamp(),
       });

@@ -5,8 +5,9 @@ import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ROUTE_PATHS } from '@/lib/index';
 import Home from '@/pages/Home';
-import Gallery from '@/pages/Gallery';
+import Gallery from '@/pages/GalleryPage';
 import Admin from '@/pages/Admin';
+import Events from '@/pages/Events';
 import Review from '@/pages/Review';
 import Testimonials from '@/pages/Testimonials';
 
@@ -20,6 +21,7 @@ const App = () => (
       <HashRouter>
         <Routes>
           <Route path={ROUTE_PATHS.HOME} element={<Home />} />
+          <Route path={ROUTE_PATHS.EVENTS} element={<Events />} />
           <Route path={ROUTE_PATHS.GALLERY} element={<Gallery />} />
           <Route path={ROUTE_PATHS.TESTIMONIALS} element={<Testimonials />} />
           <Route path={ROUTE_PATHS.REVIEW} element={<Review />} />

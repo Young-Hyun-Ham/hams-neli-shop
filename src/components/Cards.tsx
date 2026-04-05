@@ -397,6 +397,11 @@ export function GalleryImageCard({
               </div>
             </button>
             <CardHeader>
+              {image.categoryName && (
+                <Badge variant="secondary" className="w-fit">
+                  {image.categoryName}
+                </Badge>
+              )}
               <CardTitle className="line-clamp-2 text-lg font-semibold text-foreground">{image.title}</CardTitle>
               <CardDescription className="line-clamp-2 text-muted-foreground">{image.description}</CardDescription>
             </CardHeader>
@@ -426,6 +431,11 @@ export function GalleryImageCard({
               <img src={image.url} alt={image.title} className="h-full w-full object-contain" />
             </div>
             <div className="max-h-[45dvh] space-y-3 overflow-y-auto p-6 md:max-h-[90dvh]">
+              {image.categoryName && (
+                <Badge variant="secondary" className="w-fit">
+                  {image.categoryName}
+                </Badge>
+              )}
               <h3 className="text-xl font-semibold text-foreground">{image.title}</h3>
               <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
                 {image.description || '설명이 등록되지 않았습니다.'}

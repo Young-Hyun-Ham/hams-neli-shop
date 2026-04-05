@@ -4,12 +4,14 @@ import {
   BriefcaseBusiness,
   CircleDollarSign,
   CalendarClock,
+  FolderPlus,
   ExternalLink,
   Globe,
   ImagePlus,
   Loader2,
   Lock,
   MapPinned,
+  Megaphone,
   Music4,
   Pencil,
   Search,
@@ -23,6 +25,8 @@ import { GalleryImageCard, VideoCard } from '@/components/Cards';
 import { priceItems as fallbackPrices, services as fallbackServices } from '@/data/index';
 import {
   DEFAULT_SITE_SETTINGS,
+  type EventItem,
+  type GalleryCategory,
   type GalleryImage,
   type PriceItem,
   type Reservation,
@@ -32,7 +36,9 @@ import {
   type Video,
   type Weekday,
 } from '@/lib/index';
+import { categoryStorage } from '@/lib/categoryStorage';
 import { imageStorage } from '@/lib/imageStorage';
+import { eventStorage } from '@/lib/eventStorage';
 import { priceStorage } from '@/lib/priceStorage';
 import { reservationStorage } from '@/lib/reservationStorage';
 import { serviceStorage } from '@/lib/serviceStorage';
@@ -50,6 +56,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
@@ -72,6 +79,9 @@ type ReservationEditState = {
 };
 
 type ServiceImageMode = 'url' | 'file';
+type EventImageMode = 'url' | 'file';
+type CategoryImageMode = 'url' | 'file';
+type GalleryImageMode = 'url' | 'file';
 
 type ServiceEditState = {
   id: string;
@@ -94,6 +104,18 @@ type PriceEditState = {
   visible: boolean;
 };
 
+type EventEditState = {
+  id: string;
+  title: string;
+  content: string;
+  image: string;
+  originalImage: string;
+  imageMode: EventImageMode;
+  startDate: string;
+  endDate: string;
+  visible: boolean;
+};
+
 type VideoEditState = {
   id: string;
   title: string;
@@ -106,6 +128,20 @@ type ImageEditState = {
   id: string;
   title: string;
   description: string;
+  url: string;
+  originalUrl: string;
+  imageMode: GalleryImageMode;
+  categoryId: string;
+  visible: boolean;
+};
+
+type CategoryEditState = {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  originalImage: string;
+  imageMode: CategoryImageMode;
   visible: boolean;
 };
 
@@ -139,6 +175,18 @@ const initialPriceEditState: PriceEditState = {
   visible: true,
 };
 
+const initialEventEditState: EventEditState = {
+  id: '',
+  title: '',
+  content: '첫 방문 시 무료, 두 번째 방문 시 50프로 할인.',
+  image: '',
+  originalImage: '',
+  imageMode: 'url',
+  startDate: '',
+  endDate: '',
+  visible: true,
+};
+
 const initialVideoEditState: VideoEditState = {
   id: '',
   title: '',
@@ -151,6 +199,20 @@ const initialImageEditState: ImageEditState = {
   id: '',
   title: '',
   description: '',
+  url: '',
+  originalUrl: '',
+  imageMode: 'url',
+  categoryId: '',
+  visible: true,
+};
+
+const initialCategoryEditState: CategoryEditState = {
+  id: '',
+  name: '',
+  description: '',
+  image: '',
+  originalImage: '',
+  imageMode: 'url',
   visible: true,
 };
 
@@ -250,8 +312,14 @@ const parseServiceFeatures = (value: string) =>
 const formatServiceFeatures = (features: string[]) => features.join('\n');
 
 const isValidImageUrl = (value: string) => {
+  const trimmed = value.trim();
+
+  if (trimmed.startsWith('/')) {
+    return true;
+  }
+
   try {
-    const parsed = new URL(value);
+    const parsed = new URL(trimmed);
     return parsed.protocol === 'http:' || parsed.protocol === 'https:';
   } catch {
     return false;
@@ -267,7 +335,9 @@ export default function Admin() {
   const [nextAdminPassword, setNextAdminPassword] = useState('');
   const [confirmAdminPassword, setConfirmAdminPassword] = useState('');
   const [videos, setVideos] = useState<Video[]>([]);
+  const [categories, setCategories] = useState<GalleryCategory[]>([]);
   const [images, setImages] = useState<GalleryImage[]>([]);
+  const [events, setEvents] = useState<EventItem[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [prices, setPrices] = useState<PriceItem[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -276,6 +346,9 @@ export default function Admin() {
   const [videoUrl, setVideoUrl] = useState('');
   const [imageTitle, setImageTitle] = useState('');
   const [imageDescription, setImageDescription] = useState('');
+  const [imageMode, setImageMode] = useState<GalleryImageMode>('file');
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageCategoryId, setImageCategoryId] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState('');
   const [imageInputKey, setImageInputKey] = useState(0);
@@ -289,12 +362,30 @@ export default function Admin() {
   const [serviceImagePreviewUrl, setServiceImagePreviewUrl] = useState('');
   const [serviceImageInputKey, setServiceImageInputKey] = useState(0);
   const [serviceVisible, setServiceVisible] = useState(true);
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventContent, setEventContent] = useState('첫 방문 시 무료, 두 번째 방문 시 50프로 할인.');
+  const [eventImageMode, setEventImageMode] = useState<EventImageMode>('url');
+  const [eventImage, setEventImage] = useState('');
+  const [eventImageFile, setEventImageFile] = useState<File | null>(null);
+  const [eventImagePreviewUrl, setEventImagePreviewUrl] = useState('');
+  const [eventImageInputKey, setEventImageInputKey] = useState(0);
+  const [eventStartDate, setEventStartDate] = useState('');
+  const [eventEndDate, setEventEndDate] = useState('');
+  const [eventVisible, setEventVisible] = useState(true);
   const [priceCategory, setPriceCategory] = useState('');
   const [priceName, setPriceName] = useState('');
   const [priceValue, setPriceValue] = useState('');
   const [priceDuration, setPriceDuration] = useState('');
   const [priceDescription, setPriceDescription] = useState('');
   const [priceVisible, setPriceVisible] = useState(true);
+  const [categoryName, setCategoryName] = useState('');
+  const [categoryDescription, setCategoryDescription] = useState('');
+  const [categoryImageMode, setCategoryImageMode] = useState<CategoryImageMode>('url');
+  const [categoryImage, setCategoryImage] = useState('');
+  const [categoryImageFile, setCategoryImageFile] = useState<File | null>(null);
+  const [categoryImagePreviewUrl, setCategoryImagePreviewUrl] = useState('');
+  const [categoryImageInputKey, setCategoryImageInputKey] = useState(0);
+  const [categoryVisible, setCategoryVisible] = useState(true);
   const [imageVisible, setImageVisible] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
@@ -302,6 +393,8 @@ export default function Admin() {
   const [priceUploading, setPriceUploading] = useState(false);
   const [loadingVideos, setLoadingVideos] = useState(false);
   const [loadingImages, setLoadingImages] = useState(false);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [loadingEvents, setLoadingEvents] = useState(false);
   const [loadingServices, setLoadingServices] = useState(false);
   const [loadingPrices, setLoadingPrices] = useState(false);
   const [loadingReservations, setLoadingReservations] = useState(false);
@@ -309,6 +402,10 @@ export default function Admin() {
   const [success, setSuccess] = useState('');
   const [imageError, setImageError] = useState('');
   const [imageSuccess, setImageSuccess] = useState('');
+  const [categoryError, setCategoryError] = useState('');
+  const [categorySuccess, setCategorySuccess] = useState('');
+  const [eventError, setEventError] = useState('');
+  const [eventSuccess, setEventSuccess] = useState('');
   const [serviceError, setServiceError] = useState('');
   const [serviceSuccess, setServiceSuccess] = useState('');
   const [priceError, setPriceError] = useState('');
@@ -343,7 +440,25 @@ export default function Admin() {
   const [videoSaving, setVideoSaving] = useState(false);
   const [editImageOpen, setEditImageOpen] = useState(false);
   const [editImage, setEditImage] = useState<ImageEditState>(initialImageEditState);
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImagePreviewUrl, setEditImagePreviewUrl] = useState('');
+  const [editImageInputKey, setEditImageInputKey] = useState(0);
   const [imageSaving, setImageSaving] = useState(false);
+  const [editCategoryOpen, setEditCategoryOpen] = useState(false);
+  const [editCategory, setEditCategory] = useState<CategoryEditState>(initialCategoryEditState);
+  const [editCategoryFile, setEditCategoryFile] = useState<File | null>(null);
+  const [editCategoryPreviewUrl, setEditCategoryPreviewUrl] = useState('');
+  const [editCategoryInputKey, setEditCategoryInputKey] = useState(0);
+  const [categorySaving, setCategorySaving] = useState(false);
+  const [categoryDeletingId, setCategoryDeletingId] = useState('');
+  const [editEventOpen, setEditEventOpen] = useState(false);
+  const [editEvent, setEditEvent] = useState<EventEditState>(initialEventEditState);
+  const [editEventFile, setEditEventFile] = useState<File | null>(null);
+  const [editEventPreviewUrl, setEditEventPreviewUrl] = useState('');
+  const [editEventInputKey, setEditEventInputKey] = useState(0);
+  const [eventUploading, setEventUploading] = useState(false);
+  const [eventSaving, setEventSaving] = useState(false);
+  const [eventDeletingId, setEventDeletingId] = useState('');
   const [editPriceOpen, setEditPriceOpen] = useState(false);
   const [editPrice, setEditPrice] = useState<PriceEditState>(initialPriceEditState);
   const [priceSaving, setPriceSaving] = useState(false);
@@ -390,11 +505,15 @@ export default function Admin() {
     void loadVideos();
     void loadImages();
     void loadSettings();
+    const unsubscribeCategories = subscribeCategories();
+    const unsubscribeEvents = subscribeEvents();
     const unsubscribeServices = subscribeServices();
     const unsubscribePrices = subscribePrices();
     const unsubscribeReservations = subscribeReservations();
 
     return () => {
+      unsubscribeCategories();
+      unsubscribeEvents();
       unsubscribeServices();
       unsubscribePrices();
       unsubscribeReservations();
@@ -402,8 +521,17 @@ export default function Admin() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (!imageFile) {
-      setImagePreviewUrl('');
+    if (eventStartDate && eventEndDate) {
+      return;
+    }
+
+    setEventStartDate((current) => current || formatDateInputValue(new Date()));
+    setEventEndDate((current) => current || formatDateInputValue(addMonthsToDate(new Date(), 1)));
+  }, [eventEndDate, eventStartDate]);
+
+  useEffect(() => {
+    if (imageMode !== 'file' || !imageFile) {
+      setImagePreviewUrl(imageMode === 'url' ? imageUrl.trim() : '');
       return;
     }
 
@@ -413,7 +541,7 @@ export default function Admin() {
     return () => {
       URL.revokeObjectURL(objectUrl);
     };
-  }, [imageFile]);
+  }, [imageFile, imageMode, imageUrl]);
 
   useEffect(() => {
     if (serviceImageMode !== 'file' || !serviceImageFile) {
@@ -430,6 +558,34 @@ export default function Admin() {
   }, [serviceImageFile, serviceImageMode, serviceImageUrl]);
 
   useEffect(() => {
+    if (eventImageMode !== 'file' || !eventImageFile) {
+      setEventImagePreviewUrl(eventImageMode === 'url' ? eventImage.trim() : '');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(eventImageFile);
+    setEventImagePreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [eventImage, eventImageFile, eventImageMode]);
+
+  useEffect(() => {
+    if (categoryImageMode !== 'file' || !categoryImageFile) {
+      setCategoryImagePreviewUrl(categoryImageMode === 'url' ? categoryImage.trim() : '');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(categoryImageFile);
+    setCategoryImagePreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [categoryImage, categoryImageFile, categoryImageMode]);
+
+  useEffect(() => {
     if (editService.imageMode !== 'file' || !editServiceFile) {
       setEditServicePreviewUrl(editService.imageMode === 'url' ? editService.image.trim() : '');
       return;
@@ -442,6 +598,48 @@ export default function Admin() {
       URL.revokeObjectURL(objectUrl);
     };
   }, [editService.image, editService.imageMode, editServiceFile]);
+
+  useEffect(() => {
+    if (editEvent.imageMode !== 'file' || !editEventFile) {
+      setEditEventPreviewUrl(editEvent.imageMode === 'url' ? editEvent.image.trim() : '');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(editEventFile);
+    setEditEventPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [editEvent.image, editEvent.imageMode, editEventFile]);
+
+  useEffect(() => {
+    if (editCategory.imageMode !== 'file' || !editCategoryFile) {
+      setEditCategoryPreviewUrl(editCategory.imageMode === 'url' ? editCategory.image.trim() : '');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(editCategoryFile);
+    setEditCategoryPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [editCategory.image, editCategory.imageMode, editCategoryFile]);
+
+  useEffect(() => {
+    if (editImage.imageMode !== 'file' || !editImageFile) {
+      setEditImagePreviewUrl(editImage.imageMode === 'url' ? editImage.url.trim() : '');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(editImageFile);
+    setEditImagePreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [editImage.url, editImage.imageMode, editImageFile]);
 
   useEffect(() => {
     setServicesPage(1);
@@ -486,6 +684,37 @@ export default function Admin() {
     } finally {
       setLoadingImages(false);
     }
+  };
+
+  const subscribeCategories = () => {
+    setLoadingCategories(true);
+    return categoryStorage.subscribeCategories(
+      (items) => {
+        setCategories(items);
+        setLoadingCategories(false);
+      },
+      (subscriptionError) => {
+        console.error('Failed to subscribe categories:', subscriptionError);
+        setCategoryError('카테고리 목록을 불러오지 못했습니다. Firebase 설정을 확인해 주세요.');
+        setLoadingCategories(false);
+      },
+    );
+  };
+
+  const subscribeEvents = () => {
+    setLoadingEvents(true);
+    return eventStorage.subscribeEvents(
+      (items) => {
+        setEvents(items);
+        setLoadingEvents(false);
+      },
+      (subscriptionError) => {
+        console.error('Failed to subscribe events:', subscriptionError);
+        setEvents([]);
+        setEventError('이벤트 목록을 불러오지 못했습니다. Firebase 설정을 확인해 주세요.');
+        setLoadingEvents(false);
+      },
+    );
   };
 
   const subscribeServices = () => {
@@ -668,12 +897,30 @@ export default function Admin() {
     setImageError('');
   };
 
+  const handleEditImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextFile = event.target.files?.[0] ?? null;
+    setEditImageFile(nextFile);
+    setImageError('');
+  };
+
   const handleImageUpload = async (event: React.FormEvent) => {
     event.preventDefault();
 
     const trimmedTitle = imageTitle.trim();
-    if (!trimmedTitle || !imageFile) {
-      setImageError('제목과 이미지를 모두 입력해 주세요.');
+    const trimmedImageUrl = imageUrl.trim();
+    const category = categories.find((item) => item.id === imageCategoryId);
+    if (!trimmedTitle || !category) {
+      setImageError('제목, 카테고리, 이미지를 모두 입력해 주세요.');
+      return;
+    }
+
+    if (imageMode === 'url' && !isValidImageUrl(trimmedImageUrl)) {
+      setImageError('올바른 이미지 주소를 입력해 주세요.');
+      return;
+    }
+
+    if (imageMode === 'file' && !imageFile) {
+      setImageError('업로드할 이미지 파일을 선택해 주세요.');
       return;
     }
 
@@ -683,14 +930,20 @@ export default function Admin() {
 
     try {
       await imageStorage.addImage({
-        file: imageFile,
+        file: imageMode === 'file' ? imageFile ?? undefined : undefined,
+        url: imageMode === 'url' ? trimmedImageUrl : undefined,
         title: trimmedTitle,
         description: imageDescription.trim(),
+        categoryId: category.id,
+        categoryName: category.name,
         visible: imageVisible,
       });
       setImageSuccess('이미지를 등록했습니다.');
       setImageTitle('');
       setImageDescription('');
+      setImageMode('file');
+      setImageUrl('');
+      setImageCategoryId('');
       setImageFile(null);
       setImageVisible(true);
       setImageInputKey((prev) => prev + 1);
@@ -719,8 +972,14 @@ export default function Admin() {
       id: image.id,
       title: image.title,
       description: image.description,
+      url: image.url,
+      originalUrl: image.url,
+      imageMode: 'url',
+      categoryId: image.categoryId || '',
       visible: image.visible !== false,
     });
+    setEditImageFile(null);
+    setEditImageInputKey((prev) => prev + 1);
     setImageError('');
     setImageSuccess('');
     setEditImageOpen(true);
@@ -729,8 +988,20 @@ export default function Admin() {
   const handleUpdateImage = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!editImage.title.trim()) {
-      setImageError('제목을 입력해 주세요.');
+    const trimmedImageUrl = editImage.url.trim();
+    const category = categories.find((item) => item.id === editImage.categoryId);
+    if (!editImage.title.trim() || !category) {
+      setImageError('제목과 카테고리를 입력해 주세요.');
+      return;
+    }
+
+    if (editImage.imageMode === 'url' && !isValidImageUrl(trimmedImageUrl)) {
+      setImageError('올바른 이미지 주소를 입력해 주세요.');
+      return;
+    }
+
+    if (editImage.imageMode === 'file' && !editImageFile) {
+      setImageError('교체할 이미지 파일을 선택해 주세요.');
       return;
     }
 
@@ -739,9 +1010,18 @@ export default function Admin() {
     setImageSuccess('');
 
     try {
+      const nextUrl =
+        editImage.imageMode === 'file' && editImageFile
+          ? await imageStorage.uploadImage(editImageFile)
+          : trimmedImageUrl;
+
       await imageStorage.updateImage(editImage.id, {
         title: editImage.title.trim(),
         description: editImage.description.trim(),
+        url: nextUrl,
+        previousUrl: editImage.originalUrl,
+        categoryId: category.id,
+        categoryName: category.name,
         visible: editImage.visible,
       });
       setImageSuccess('이미지를 수정했습니다.');
@@ -765,6 +1045,172 @@ export default function Admin() {
     const nextFile = event.target.files?.[0] ?? null;
     setEditServiceFile(nextFile);
     setServiceError('');
+  };
+
+  const handleEventImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextFile = event.target.files?.[0] ?? null;
+    setEventImageFile(nextFile);
+    setEventError('');
+  };
+
+  const handleEditEventImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextFile = event.target.files?.[0] ?? null;
+    setEditEventFile(nextFile);
+    setEventError('');
+  };
+
+  const handleCategoryImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextFile = event.target.files?.[0] ?? null;
+    setCategoryImageFile(nextFile);
+    setCategoryError('');
+  };
+
+  const handleEditCategoryImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextFile = event.target.files?.[0] ?? null;
+    setEditCategoryFile(nextFile);
+    setCategoryError('');
+  };
+
+  const resetCategoryForm = () => {
+    setCategoryName('');
+    setCategoryDescription('');
+    setCategoryImageMode('url');
+    setCategoryImage('');
+    setCategoryImageFile(null);
+    setCategoryImageInputKey((prev) => prev + 1);
+    setCategoryVisible(true);
+  };
+
+  const handleCategorySubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!categoryName.trim()) {
+      setCategoryError('카테고리명을 입력해 주세요.');
+      return;
+    }
+
+    if (categoryImageMode === 'url' && categoryImage.trim() && !isValidImageUrl(categoryImage.trim())) {
+      setCategoryError('올바른 이미지 주소를 입력해 주세요.');
+      return;
+    }
+
+    if (categoryImageMode === 'file' && !categoryImageFile) {
+      setCategoryError('업로드할 이미지 파일을 선택해 주세요.');
+      return;
+    }
+
+    setCategorySaving(true);
+    setCategoryError('');
+    setCategorySuccess('');
+
+    try {
+      const image =
+        categoryImageMode === 'file' && categoryImageFile
+          ? await categoryStorage.uploadImage(categoryImageFile)
+          : categoryImage.trim();
+
+      await categoryStorage.addCategory({
+        name: categoryName.trim(),
+        description: categoryDescription.trim(),
+        image,
+        visible: categoryVisible,
+      });
+      setCategorySuccess('카테고리를 등록했습니다.');
+      resetCategoryForm();
+    } catch (saveError) {
+      console.error('Failed to save category:', saveError);
+      setCategoryError('카테고리 등록 중 오류가 발생했습니다.');
+    } finally {
+      setCategorySaving(false);
+    }
+  };
+
+  const openEditCategoryDialog = (category: GalleryCategory) => {
+    setEditCategory({
+      id: category.id,
+      name: category.name,
+      description: category.description || '',
+      image: category.image || '',
+      originalImage: category.image || '',
+      imageMode: 'url',
+      visible: category.visible !== false,
+    });
+    setEditCategoryFile(null);
+    setEditCategoryInputKey((prev) => prev + 1);
+    setCategoryError('');
+    setCategorySuccess('');
+    setEditCategoryOpen(true);
+  };
+
+  const handleUpdateCategory = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!editCategory.name.trim()) {
+      setCategoryError('카테고리명을 입력해 주세요.');
+      return;
+    }
+
+    if (editCategory.imageMode === 'url' && editCategory.image.trim() && !isValidImageUrl(editCategory.image.trim())) {
+      setCategoryError('올바른 이미지 주소를 입력해 주세요.');
+      return;
+    }
+
+    if (editCategory.imageMode === 'file' && !editCategoryFile) {
+      setCategoryError('교체할 이미지 파일을 선택해 주세요.');
+      return;
+    }
+
+    setCategorySaving(true);
+    setCategoryError('');
+    setCategorySuccess('');
+
+    try {
+      const image =
+        editCategory.imageMode === 'file' && editCategoryFile
+          ? await categoryStorage.uploadImage(editCategoryFile)
+          : editCategory.image.trim();
+
+      await categoryStorage.updateCategory(editCategory.id, {
+        name: editCategory.name.trim(),
+        description: editCategory.description.trim(),
+        image,
+        previousImage: editCategory.originalImage,
+        visible: editCategory.visible,
+      });
+      setCategorySuccess('카테고리를 수정했습니다.');
+      setEditCategoryOpen(false);
+    } catch (updateError) {
+      console.error('Failed to update category:', updateError);
+      setCategoryError('카테고리 수정 중 오류가 발생했습니다.');
+    } finally {
+      setCategorySaving(false);
+    }
+  };
+
+  const handleDeleteCategory = async (category: GalleryCategory) => {
+    const linkedImages = images.filter((image) => image.categoryId === category.id);
+
+    if (linkedImages.length > 0) {
+      setCategoryError('해당 카테고리에 연결된 이미지가 있어 삭제할 수 없습니다. 먼저 이미지를 이동하거나 삭제해 주세요.');
+      return;
+    }
+
+    const flag = await window.confirm(`카테고리를 삭제하시겠습니까?\n\n카테고리명: ${category.name}`);
+    if (!flag) return;
+
+    setCategoryDeletingId(category.id);
+    setCategoryError('');
+    setCategorySuccess('');
+
+    try {
+      await categoryStorage.deleteCategory(category);
+      setCategorySuccess('카테고리를 삭제했습니다.');
+    } catch (deleteError) {
+      console.error('Failed to delete category:', deleteError);
+      setCategoryError('카테고리 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setCategoryDeletingId('');
+    }
   };
 
   const resetServiceForm = () => {
@@ -931,6 +1377,159 @@ export default function Admin() {
       setServiceError('기본 services 데이터를 Firebase에 반영하지 못했습니다.');
     } finally {
       setServiceImporting(false);
+    }
+  };
+
+  const resetEventForm = () => {
+    setEventTitle('');
+    setEventContent('첫 방문 시 무료, 두 번째 방문 시 50프로 할인.');
+    setEventImageMode('url');
+    setEventImage('');
+    setEventImageFile(null);
+    setEventImageInputKey((prev) => prev + 1);
+    setEventStartDate(formatDateInputValue(new Date()));
+    setEventEndDate(formatDateInputValue(addMonthsToDate(new Date(), 1)));
+    setEventVisible(true);
+  };
+
+  const handleEventSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!eventTitle.trim() || !eventContent.trim() || !eventStartDate || !eventEndDate) {
+      setEventError('제목, 내용, 시작일자, 종료일자를 모두 입력해 주세요.');
+      return;
+    }
+
+    if (eventImageMode === 'url' && eventImage.trim() && !isValidImageUrl(eventImage.trim())) {
+      setEventError('올바른 이미지 주소를 입력해 주세요.');
+      return;
+    }
+
+    if (eventImageMode === 'file' && !eventImageFile) {
+      setEventError('업로드할 이미지 파일을 선택해 주세요.');
+      return;
+    }
+
+    if (eventStartDate > eventEndDate) {
+      setEventError('종료일자는 시작일자보다 빠를 수 없습니다.');
+      return;
+    }
+
+    setEventUploading(true);
+    setEventError('');
+    setEventSuccess('');
+
+    try {
+      const image =
+        eventImageMode === 'file' && eventImageFile
+          ? await eventStorage.uploadImage(eventImageFile)
+          : eventImage.trim();
+
+      await eventStorage.addEvent({
+        title: eventTitle.trim(),
+        content: eventContent.trim(),
+        image,
+        startDate: eventStartDate,
+        endDate: eventEndDate,
+        visible: eventVisible,
+      });
+      setEventSuccess('이벤트를 등록했습니다.');
+      resetEventForm();
+    } catch (saveError) {
+      console.error('Failed to save event:', saveError);
+      setEventError('이벤트 등록 중 오류가 발생했습니다.');
+    } finally {
+      setEventUploading(false);
+    }
+  };
+
+  const openEditEventDialog = (item: EventItem) => {
+    setEditEvent({
+      id: item.id,
+      title: item.title,
+      content: item.content,
+      image: item.image,
+      originalImage: item.image,
+      imageMode: 'url',
+      startDate: item.startDate,
+      endDate: item.endDate,
+      visible: item.visible !== false,
+    });
+    setEditEventFile(null);
+    setEditEventInputKey((prev) => prev + 1);
+    setEventError('');
+    setEventSuccess('');
+    setEditEventOpen(true);
+  };
+
+  const handleUpdateEvent = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!editEvent.title.trim() || !editEvent.content.trim() || !editEvent.startDate || !editEvent.endDate) {
+      setEventError('제목, 내용, 시작일자, 종료일자를 모두 입력해 주세요.');
+      return;
+    }
+
+    if (editEvent.imageMode === 'url' && editEvent.image.trim() && !isValidImageUrl(editEvent.image.trim())) {
+      setEventError('올바른 이미지 주소를 입력해 주세요.');
+      return;
+    }
+
+    if (editEvent.imageMode === 'file' && !editEventFile) {
+      setEventError('교체할 이미지 파일을 선택해 주세요.');
+      return;
+    }
+
+    if (editEvent.startDate > editEvent.endDate) {
+      setEventError('종료일자는 시작일자보다 빠를 수 없습니다.');
+      return;
+    }
+
+    setEventSaving(true);
+    setEventError('');
+    setEventSuccess('');
+
+    try {
+      const image =
+        editEvent.imageMode === 'file' && editEventFile
+          ? await eventStorage.uploadImage(editEventFile)
+          : editEvent.image.trim();
+
+      await eventStorage.updateEvent(editEvent.id, {
+        title: editEvent.title.trim(),
+        content: editEvent.content.trim(),
+        image,
+        previousImage: editEvent.originalImage,
+        startDate: editEvent.startDate,
+        endDate: editEvent.endDate,
+        visible: editEvent.visible,
+      });
+      setEventSuccess('이벤트를 수정했습니다.');
+      setEditEventOpen(false);
+    } catch (updateError) {
+      console.error('Failed to update event:', updateError);
+      setEventError('이벤트 수정 중 오류가 발생했습니다.');
+    } finally {
+      setEventSaving(false);
+    }
+  };
+
+  const handleDeleteEvent = async (item: EventItem) => {
+    const flag = await window.confirm(`이벤트를 삭제하시겠습니까?\n\n제목: ${item.title}`);
+    if (!flag) return;
+
+    setEventDeletingId(item.id);
+    setEventError('');
+    setEventSuccess('');
+
+    try {
+      await eventStorage.deleteEvent(item);
+      setEventSuccess('이벤트를 삭제했습니다.');
+    } catch (deleteError) {
+      console.error('Failed to delete event:', deleteError);
+      setEventError('이벤트 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setEventDeletingId('');
     }
   };
 
@@ -1295,9 +1894,17 @@ export default function Admin() {
                   <VideoIcon className="h-4 w-4 sm:mr-2" />
                   <span className="sr-only sm:not-sr-only">동영상 등록</span>
                 </TabsTrigger>
+                <TabsTrigger value="categories" className="cursor-pointer rounded-xl px-3 py-2.5 sm:px-5">
+                  <FolderPlus className="h-4 w-4 sm:mr-2" />
+                  <span className="sr-only sm:not-sr-only">카테고리 등록</span>
+                </TabsTrigger>
                 <TabsTrigger value="images" className="cursor-pointer rounded-xl px-3 py-2.5 sm:px-5">
                   <ImagePlus className="h-4 w-4 sm:mr-2" />
                   <span className="sr-only sm:not-sr-only">이미지 등록</span>
+                </TabsTrigger>
+                <TabsTrigger value="events" className="cursor-pointer rounded-xl px-3 py-2.5 sm:px-5">
+                  <Megaphone className="h-4 w-4 sm:mr-2" />
+                  <span className="sr-only sm:not-sr-only">이벤트 관리</span>
                 </TabsTrigger>
                 <TabsTrigger value="services" className="cursor-pointer rounded-xl px-3 py-2.5 sm:px-5">
                   <BriefcaseBusiness className="h-4 w-4 sm:mr-2" />
@@ -1394,15 +2001,68 @@ export default function Admin() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="image-file">이미지 파일</Label>
-                        <Input
-                          key={imageInputKey}
-                          id="image-file"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageFileChange}
-                          required
-                        />
+                        <Label>카테고리 선택</Label>
+                        <Select value={imageCategoryId} onValueChange={setImageCategoryId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="카테고리를 선택해 주세요." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.filter((category) => category.visible !== false).map((category) => (
+                              <SelectItem key={category.id} value={category.id}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-3">
+                        <Label>이미지 입력 방식</Label>
+                        <div className="inline-flex rounded-xl border border-border/60 p-1">
+                          <Button
+                            type="button"
+                            variant={imageMode === 'url' ? 'default' : 'ghost'}
+                            size="sm"
+                            className="rounded-lg"
+                            onClick={() => {
+                              setImageMode('url');
+                              setImageFile(null);
+                              setImageInputKey((prev) => prev + 1);
+                            }}
+                          >
+                            주소 입력
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={imageMode === 'file' ? 'default' : 'ghost'}
+                            size="sm"
+                            className="rounded-lg"
+                            onClick={() => setImageMode('file')}
+                          >
+                            파일 첨부
+                          </Button>
+                        </div>
+                        {imageMode === 'url' ? (
+                          <div className="space-y-2">
+                            <Label htmlFor="image-url">이미지 주소</Label>
+                            <Input
+                              id="image-url"
+                              value={imageUrl}
+                              onChange={(event) => setImageUrl(event.target.value)}
+                              placeholder="https://example.com/gallery.jpg"
+                            />
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <Label htmlFor="image-file">이미지 파일</Label>
+                            <Input
+                              key={imageInputKey}
+                              id="image-file"
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageFileChange}
+                            />
+                          </div>
+                        )}
                         {imagePreviewUrl && (
                           <div className="overflow-hidden rounded-2xl border border-border/60 bg-muted/30">
                             <div className="flex aspect-[4/3] items-center justify-center overflow-hidden">
@@ -1449,6 +2109,312 @@ export default function Admin() {
                             </div>
                           </div>
                         ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+
+            <TabsContent value="categories" className="space-y-8">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="text-2xl">카테고리 등록</CardTitle>
+                    <CardDescription>갤러리 이미지에 연결할 카테고리를 등록합니다.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleCategorySubmit} className="space-y-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="category-name">카테고리명</Label>
+                        <Input id="category-name" value={categoryName} onChange={(event) => setCategoryName(event.target.value)} placeholder="예: 웨딩 네일" required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="category-description">설명</Label>
+                        <Textarea id="category-description" value={categoryDescription} onChange={(event) => setCategoryDescription(event.target.value)} placeholder="카테고리 설명" rows={4} />
+                      </div>
+                      <div className="space-y-3">
+                        <Label>이미지 입력 방식</Label>
+                        <div className="inline-flex rounded-xl border border-border/60 p-1">
+                          <Button
+                            type="button"
+                            variant={categoryImageMode === 'url' ? 'default' : 'ghost'}
+                            size="sm"
+                            className="rounded-lg"
+                            onClick={() => {
+                              setCategoryImageMode('url');
+                              setCategoryImageFile(null);
+                              setCategoryImageInputKey((prev) => prev + 1);
+                            }}
+                          >
+                            주소 입력
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={categoryImageMode === 'file' ? 'default' : 'ghost'}
+                            size="sm"
+                            className="rounded-lg"
+                            onClick={() => setCategoryImageMode('file')}
+                          >
+                            파일 첨부
+                          </Button>
+                        </div>
+                        {categoryImageMode === 'url' ? (
+                          <div className="space-y-2">
+                            <Label htmlFor="category-image-url">대표 이미지 주소</Label>
+                            <Input
+                              id="category-image-url"
+                              value={categoryImage}
+                              onChange={(event) => setCategoryImage(event.target.value)}
+                              placeholder="https://example.com/category.jpg"
+                            />
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <Label htmlFor="category-image-file">대표 이미지 파일</Label>
+                            <Input
+                              key={categoryImageInputKey}
+                              id="category-image-file"
+                              type="file"
+                              accept="image/*"
+                              onChange={handleCategoryImageFileChange}
+                            />
+                          </div>
+                        )}
+                        {categoryImagePreviewUrl && (
+                          <div className="overflow-hidden rounded-2xl border border-border/60 bg-muted/30">
+                            <div className="flex aspect-[4/3] items-center justify-center overflow-hidden">
+                              <img src={categoryImagePreviewUrl} alt="카테고리 미리보기" className="h-full w-full object-cover" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-3">
+                        <Label>노출여부</Label>
+                        <div className="inline-flex rounded-xl border border-border/60 p-1">
+                          <Button type="button" variant={categoryVisible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setCategoryVisible(true)}>O</Button>
+                          <Button type="button" variant={!categoryVisible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setCategoryVisible(false)}>X</Button>
+                        </div>
+                      </div>
+                      {categoryError && <Alert variant="destructive"><AlertDescription>{categoryError}</AlertDescription></Alert>}
+                      {categorySuccess && <Alert className="border-green-200 bg-green-50 text-green-800"><AlertDescription>{categorySuccess}</AlertDescription></Alert>}
+                      <Button type="submit" disabled={categorySaving} className="w-full">
+                        {categorySaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />등록 중...</> : <><Upload className="mr-2 h-4 w-4" />카테고리 등록</>}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="text-2xl">등록된 카테고리</CardTitle>
+                    <CardDescription>카테고리를 수정하거나 삭제할 수 있습니다.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {loadingCategories ? <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : categories.length === 0 ? <div className="py-12 text-center text-muted-foreground">등록된 카테고리가 없습니다.</div> : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>카테고리명</TableHead>
+                              <TableHead className="hidden lg:table-cell">설명</TableHead>
+                              <TableHead>노출</TableHead>
+                              <TableHead className="w-[180px]">관리</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {categories.map((category) => (
+                              <TableRow key={category.id} className={rowVisibilityClassName(category.visible)}>
+                                <TableCell className="font-medium">{category.name}</TableCell>
+                                <TableCell className="hidden max-w-md whitespace-pre-line text-sm text-muted-foreground lg:table-cell">{category.description || '-'}</TableCell>
+                                <TableCell>{category.visible !== false ? 'O' : 'X'}</TableCell>
+                                <TableCell>
+                                  <div className="flex gap-2">
+                                    <Button type="button" variant="outline" size="sm" className="gap-1 px-2" onClick={() => openEditCategoryDialog(category)}><Pencil className="mr-1 h-4 w-4" />수정</Button>
+                                    <Button type="button" variant="destructive" size="sm" className="gap-1 px-2" disabled={categoryDeletingId === category.id} onClick={() => void handleDeleteCategory(category)}>
+                                      {categoryDeletingId === category.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Trash2 className="mr-1 h-4 w-4" />삭제</>}
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+
+            <TabsContent value="events" className="space-y-8">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="text-2xl">이벤트 등록</CardTitle>
+                    <CardDescription>홈 모달과 이벤트 게시판에 노출할 프로모션을 등록합니다.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleEventSubmit} className="space-y-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="event-title">이벤트 제목</Label>
+                        <Input
+                          id="event-title"
+                          value={eventTitle}
+                          onChange={(event) => setEventTitle(event.target.value)}
+                          placeholder="방문 감사 이벤트"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="event-content">이벤트 내용</Label>
+                        <Textarea
+                          id="event-content"
+                          value={eventContent}
+                          onChange={(event) => setEventContent(event.target.value)}
+                          rows={4}
+                          placeholder="첫 방문 시 무료, 두 번째 방문 시 50프로 할인."
+                          required
+                        />
+                      </div>
+                      <div className="space-y-3">
+                        <Label>이미지 입력 방식</Label>
+                        <div className="inline-flex rounded-xl border border-border/60 p-1">
+                          <Button
+                            type="button"
+                            variant={eventImageMode === 'url' ? 'default' : 'ghost'}
+                            size="sm"
+                            className="rounded-lg"
+                            onClick={() => {
+                              setEventImageMode('url');
+                              setEventImageFile(null);
+                              setEventImageInputKey((prev) => prev + 1);
+                            }}
+                          >
+                            주소 입력
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={eventImageMode === 'file' ? 'default' : 'ghost'}
+                            size="sm"
+                            className="rounded-lg"
+                            onClick={() => setEventImageMode('file')}
+                          >
+                            파일 첨부
+                          </Button>
+                        </div>
+                        {eventImageMode === 'url' ? (
+                          <div className="space-y-2">
+                            <Label htmlFor="event-image">배경 이미지 주소</Label>
+                            <Input
+                              id="event-image"
+                              value={eventImage}
+                              onChange={(event) => setEventImage(event.target.value)}
+                              placeholder="비워두면 기본 이미지를 사용합니다."
+                            />
+                            <p className="text-sm text-muted-foreground">비워두면 메인 팝업에 어울리는 기본 배경 이미지가 적용됩니다.</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <Label htmlFor="event-image-file">이미지 파일</Label>
+                            <Input
+                              key={eventImageInputKey}
+                              id="event-image-file"
+                              type="file"
+                              accept="image/*"
+                              onChange={handleEventImageFileChange}
+                            />
+                          </div>
+                        )}
+                        {eventImagePreviewUrl && (
+                          <div className="overflow-hidden rounded-2xl border border-border/60 bg-muted/30">
+                            <div className="flex aspect-[4/3] items-center justify-center overflow-hidden">
+                              <img src={eventImagePreviewUrl} alt="이벤트 미리보기" className="h-full w-full object-cover" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="event-start-date">시작일자</Label>
+                          <Input
+                            id="event-start-date"
+                            type="date"
+                            value={eventStartDate}
+                            onChange={(event) => setEventStartDate(event.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="event-end-date">종료일자</Label>
+                          <Input
+                            id="event-end-date"
+                            type="date"
+                            value={eventEndDate}
+                            onChange={(event) => setEventEndDate(event.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <Label>노출여부</Label>
+                        <div className="inline-flex rounded-xl border border-border/60 p-1">
+                          <Button type="button" variant={eventVisible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setEventVisible(true)}>O</Button>
+                          <Button type="button" variant={!eventVisible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setEventVisible(false)}>X</Button>
+                        </div>
+                      </div>
+                      {eventError && <Alert variant="destructive"><AlertDescription>{eventError}</AlertDescription></Alert>}
+                      {eventSuccess && <Alert className="border-green-200 bg-green-50 text-green-800"><AlertDescription>{eventSuccess}</AlertDescription></Alert>}
+                      <Button type="submit" disabled={eventUploading} className="w-full">
+                        {eventUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />등록 중...</> : <><Upload className="mr-2 h-4 w-4" />이벤트 등록</>}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="text-2xl">등록된 이벤트</CardTitle>
+                    <CardDescription>이벤트를 수정, 삭제하고 기간과 노출 상태를 관리할 수 있습니다.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {loadingEvents ? <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : events.length === 0 ? (
+                      <div className="py-12 text-center text-muted-foreground">등록된 이벤트가 없습니다.</div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>제목</TableHead>
+                              <TableHead>기간</TableHead>
+                              <TableHead className="hidden lg:table-cell">내용</TableHead>
+                              <TableHead>노출</TableHead>
+                              <TableHead className="w-[180px]">관리</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {events.map((item) => (
+                              <TableRow key={item.id} className={rowVisibilityClassName(item.visible)}>
+                                <TableCell className="font-medium">{item.title}</TableCell>
+                                <TableCell>{item.startDate} ~ {item.endDate}</TableCell>
+                                <TableCell className="hidden max-w-md whitespace-pre-line text-sm text-muted-foreground lg:table-cell">{item.content}</TableCell>
+                                <TableCell>{item.visible !== false ? 'O' : 'X'}</TableCell>
+                                <TableCell>
+                                  <div className="flex gap-2">
+                                    <Button type="button" variant="outline" size="sm" className="gap-1 px-2" onClick={() => openEditEventDialog(item)}><Pencil className="mr-1 h-4 w-4" />수정</Button>
+                                    <Button type="button" variant="destructive" size="sm" className="gap-1 px-2" disabled={eventDeletingId === item.id} onClick={() => void handleDeleteEvent(item)}>
+                                      {eventDeletingId === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Trash2 className="mr-1 h-4 w-4" />삭제</>}
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
                       </div>
                     )}
                   </CardContent>
@@ -1824,7 +2790,15 @@ export default function Admin() {
                   {reservationMessage && <Alert className="border-green-200 bg-green-50 text-green-800"><AlertDescription>{reservationMessage}</AlertDescription></Alert>}
                   {loadingReservations ? <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : filteredReservations.length === 0 ? <div className="py-12 text-center text-muted-foreground">검색 조건에 맞는 예약이 없습니다.</div> : (
                     <Table>
-                      <TableHeader><TableRow><TableHead>날짜</TableHead><TableHead>시간</TableHead><TableHead>이름</TableHead><TableHead className="hidden md:table-cell">연락처</TableHead><TableHead className="w-[180px]">관리</TableHead></TableRow></TableHeader>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>날짜</TableHead>
+                          <TableHead>시간</TableHead>
+                          <TableHead className="hidden md:table-cell">이름</TableHead>
+                          <TableHead className="hidden md:table-cell">연락처</TableHead>
+                          <TableHead className="w-[180px]">관리</TableHead>
+                        </TableRow>
+                      </TableHeader>
                       <TableBody>
                         {paginatedReservations.map((reservation) => {
                           const reservationKey = `${reservation.date}_${reservation.time}`;
@@ -1832,7 +2806,7 @@ export default function Admin() {
                             <TableRow key={reservation.id} className="cursor-pointer" onClick={() => openReservationDetailDialog(reservation)}>
                               <TableCell>{reservation.date}</TableCell>
                               <TableCell>{reservation.time}</TableCell>
-                              <TableCell>{reservation.name}</TableCell>
+                              <TableCell className="hidden md:table-cell">{reservation.name}</TableCell>
                               <TableCell className="hidden md:table-cell">{reservation.phone}</TableCell>
                               <TableCell>
                                 <div className="flex gap-2">
@@ -1980,20 +2954,265 @@ export default function Admin() {
       </Dialog>
 
       <Dialog open={editImageOpen} onOpenChange={setEditImageOpen}>
-        <DialogContent className="w-[calc(100vw-1rem)] max-w-xl sm:w-[calc(100vw-3rem)]">
-          <DialogHeader><DialogTitle>이미지 수정</DialogTitle><DialogDescription>이미지 정보와 노출여부를 수정할 수 있습니다.</DialogDescription></DialogHeader>
-          <form onSubmit={handleUpdateImage} className="space-y-4">
-            <div className="space-y-2"><Label htmlFor="edit-image-title">제목</Label><Input id="edit-image-title" value={editImage.title} onChange={(event) => setEditImage((prev) => ({ ...prev, title: event.target.value }))} /></div>
-            <div className="space-y-2"><Label htmlFor="edit-image-description">설명</Label><Textarea id="edit-image-description" value={editImage.description} onChange={(event) => setEditImage((prev) => ({ ...prev, description: event.target.value }))} rows={4} /></div>
-            <div className="space-y-3">
-              <Label>노출여부</Label>
-              <div className="inline-flex rounded-xl border border-border/60 p-1">
-                <Button type="button" variant={editImage.visible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setEditImage((prev) => ({ ...prev, visible: true }))}>O</Button>
-                <Button type="button" variant={!editImage.visible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setEditImage((prev) => ({ ...prev, visible: false }))}>X</Button>
+        <DialogContent className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-xl flex-col gap-0 overflow-hidden p-0 sm:max-h-[calc(100dvh-3rem)] sm:w-[calc(100vw-3rem)]">
+          <div className="shrink-0 border-b px-4 py-4 sm:px-6">
+            <DialogHeader><DialogTitle>이미지 수정</DialogTitle><DialogDescription>이미지 정보와 노출여부를 수정할 수 있습니다.</DialogDescription></DialogHeader>
+          </div>
+          <form onSubmit={handleUpdateImage} className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
+              <div className="space-y-2"><Label htmlFor="edit-image-title">제목</Label><Input id="edit-image-title" value={editImage.title} onChange={(event) => setEditImage((prev) => ({ ...prev, title: event.target.value }))} /></div>
+              <div className="space-y-2"><Label htmlFor="edit-image-description">설명</Label><Textarea id="edit-image-description" value={editImage.description} onChange={(event) => setEditImage((prev) => ({ ...prev, description: event.target.value }))} rows={4} /></div>
+              <div className="space-y-2">
+                <Label>카테고리 선택</Label>
+                <Select value={editImage.categoryId} onValueChange={(value) => setEditImage((prev) => ({ ...prev, categoryId: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="카테고리를 선택해 주세요." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.filter((category) => category.visible !== false).map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-3">
+                <Label>이미지 입력 방식</Label>
+                <div className="inline-flex rounded-xl border border-border/60 p-1">
+                  <Button
+                    type="button"
+                    variant={editImage.imageMode === 'url' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="rounded-lg"
+                    onClick={() => {
+                      setEditImage((prev) => ({ ...prev, imageMode: 'url' }));
+                      setEditImageFile(null);
+                      setEditImageInputKey((prev) => prev + 1);
+                    }}
+                  >
+                    주소 입력
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={editImage.imageMode === 'file' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="rounded-lg"
+                    onClick={() => setEditImage((prev) => ({ ...prev, imageMode: 'file' }))}
+                  >
+                    파일 첨부
+                  </Button>
+                </div>
+                {editImage.imageMode === 'url' ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-image-url">이미지 주소</Label>
+                    <Input
+                      id="edit-image-url"
+                      value={editImage.url}
+                      onChange={(event) => setEditImage((prev) => ({ ...prev, url: event.target.value }))}
+                      placeholder="https://example.com/gallery.jpg"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-image-file">이미지 파일</Label>
+                    <Input
+                      key={editImageInputKey}
+                      id="edit-image-file"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleEditImageFileChange}
+                    />
+                    <p className="text-sm text-muted-foreground">파일 첨부 모드에서는 새 이미지를 선택해야 합니다.</p>
+                  </div>
+                )}
+                {editImagePreviewUrl && (
+                  <div className="overflow-hidden rounded-2xl border border-border/60 bg-muted/30">
+                    <div className="flex aspect-[4/3] items-center justify-center overflow-hidden">
+                      <img src={editImagePreviewUrl} alt="이미지 수정 미리보기" className="h-full w-full object-cover" />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-3">
+                <Label>노출여부</Label>
+                <div className="inline-flex rounded-xl border border-border/60 p-1">
+                  <Button type="button" variant={editImage.visible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setEditImage((prev) => ({ ...prev, visible: true }))}>O</Button>
+                  <Button type="button" variant={!editImage.visible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setEditImage((prev) => ({ ...prev, visible: false }))}>X</Button>
+                </div>
+              </div>
+              {imageError && <Alert variant="destructive"><AlertDescription>{imageError}</AlertDescription></Alert>}
+            </div>
+            <div className="shrink-0 border-t bg-background px-4 py-4 sm:px-6">
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <Button type="button" variant="outline" onClick={() => setEditImageOpen(false)}>취소</Button>
+                <Button type="submit" disabled={imageSaving}>{imageSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />저장 중...</> : '저장'}</Button>
               </div>
             </div>
-            {imageError && <Alert variant="destructive"><AlertDescription>{imageError}</AlertDescription></Alert>}
-            <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setEditImageOpen(false)}>취소</Button><Button type="submit" disabled={imageSaving}>{imageSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />저장 중...</> : '저장'}</Button></div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editEventOpen} onOpenChange={setEditEventOpen}>
+        <DialogContent className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-xl flex-col gap-0 overflow-hidden p-0 sm:max-h-[calc(100dvh-3rem)] sm:w-[calc(100vw-3rem)]">
+          <div className="shrink-0 border-b px-4 py-4 sm:px-6">
+            <DialogHeader><DialogTitle>이벤트 수정</DialogTitle><DialogDescription>이벤트 내용, 기간, 배경 이미지를 수정할 수 있습니다.</DialogDescription></DialogHeader>
+          </div>
+          <form onSubmit={handleUpdateEvent} className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
+              <div className="space-y-2"><Label htmlFor="edit-event-title">이벤트 제목</Label><Input id="edit-event-title" value={editEvent.title} onChange={(event) => setEditEvent((prev) => ({ ...prev, title: event.target.value }))} /></div>
+              <div className="space-y-2"><Label htmlFor="edit-event-content">이벤트 내용</Label><Textarea id="edit-event-content" value={editEvent.content} onChange={(event) => setEditEvent((prev) => ({ ...prev, content: event.target.value }))} rows={5} /></div>
+              <div className="space-y-3">
+                <Label>이미지 입력 방식</Label>
+                <div className="inline-flex rounded-xl border border-border/60 p-1">
+                  <Button
+                    type="button"
+                    variant={editEvent.imageMode === 'url' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="rounded-lg"
+                    onClick={() => {
+                      setEditEvent((prev) => ({ ...prev, imageMode: 'url' }));
+                      setEditEventFile(null);
+                      setEditEventInputKey((prev) => prev + 1);
+                    }}
+                  >
+                    주소 입력
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={editEvent.imageMode === 'file' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="rounded-lg"
+                    onClick={() => setEditEvent((prev) => ({ ...prev, imageMode: 'file' }))}
+                  >
+                    파일 첨부
+                  </Button>
+                </div>
+                {editEvent.imageMode === 'url' ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-event-image">배경 이미지 주소</Label>
+                    <Input id="edit-event-image" value={editEvent.image} onChange={(event) => setEditEvent((prev) => ({ ...prev, image: event.target.value }))} placeholder="비워두면 기본 이미지를 사용합니다." />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-event-image-file">이미지 파일</Label>
+                    <Input
+                      key={editEventInputKey}
+                      id="edit-event-image-file"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleEditEventImageFileChange}
+                    />
+                    <p className="text-sm text-muted-foreground">파일 첨부 모드에서는 새 이미지를 선택해야 합니다.</p>
+                  </div>
+                )}
+                {editEventPreviewUrl && (
+                  <div className="overflow-hidden rounded-2xl border border-border/60 bg-muted/30">
+                    <div className="flex aspect-[4/3] items-center justify-center overflow-hidden">
+                      <img src={editEventPreviewUrl} alt="이벤트 수정 미리보기" className="h-full w-full object-cover" />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2"><Label htmlFor="edit-event-start-date">시작일자</Label><Input id="edit-event-start-date" type="date" value={editEvent.startDate} onChange={(event) => setEditEvent((prev) => ({ ...prev, startDate: event.target.value }))} /></div>
+                <div className="space-y-2"><Label htmlFor="edit-event-end-date">종료일자</Label><Input id="edit-event-end-date" type="date" value={editEvent.endDate} onChange={(event) => setEditEvent((prev) => ({ ...prev, endDate: event.target.value }))} /></div>
+              </div>
+              <div className="space-y-3">
+                <Label>노출여부</Label>
+                <div className="inline-flex rounded-xl border border-border/60 p-1">
+                  <Button type="button" variant={editEvent.visible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setEditEvent((prev) => ({ ...prev, visible: true }))}>O</Button>
+                  <Button type="button" variant={!editEvent.visible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setEditEvent((prev) => ({ ...prev, visible: false }))}>X</Button>
+                </div>
+              </div>
+              {eventError && <Alert variant="destructive"><AlertDescription>{eventError}</AlertDescription></Alert>}
+            </div>
+            <div className="shrink-0 border-t bg-background px-4 py-4 sm:px-6">
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <Button type="button" variant="outline" onClick={() => setEditEventOpen(false)}>취소</Button>
+                <Button type="submit" disabled={eventSaving}>{eventSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />저장 중...</> : '저장'}</Button>
+              </div>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editCategoryOpen} onOpenChange={setEditCategoryOpen}>
+        <DialogContent className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-xl flex-col gap-0 overflow-hidden p-0 sm:max-h-[calc(100dvh-3rem)] sm:w-[calc(100vw-3rem)]">
+          <div className="shrink-0 border-b px-4 py-4 sm:px-6">
+            <DialogHeader><DialogTitle>카테고리 수정</DialogTitle><DialogDescription>카테고리명과 설명, 노출여부를 수정할 수 있습니다.</DialogDescription></DialogHeader>
+          </div>
+          <form onSubmit={handleUpdateCategory} className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
+              <div className="space-y-2"><Label htmlFor="edit-category-name">카테고리명</Label><Input id="edit-category-name" value={editCategory.name} onChange={(event) => setEditCategory((prev) => ({ ...prev, name: event.target.value }))} /></div>
+              <div className="space-y-2"><Label htmlFor="edit-category-description">설명</Label><Textarea id="edit-category-description" value={editCategory.description} onChange={(event) => setEditCategory((prev) => ({ ...prev, description: event.target.value }))} rows={4} /></div>
+              <div className="space-y-3">
+                <Label>이미지 입력 방식</Label>
+                <div className="inline-flex rounded-xl border border-border/60 p-1">
+                  <Button
+                    type="button"
+                    variant={editCategory.imageMode === 'url' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="rounded-lg"
+                    onClick={() => {
+                      setEditCategory((prev) => ({ ...prev, imageMode: 'url' }));
+                      setEditCategoryFile(null);
+                      setEditCategoryInputKey((prev) => prev + 1);
+                    }}
+                  >
+                    주소 입력
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={editCategory.imageMode === 'file' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="rounded-lg"
+                    onClick={() => setEditCategory((prev) => ({ ...prev, imageMode: 'file' }))}
+                  >
+                    파일 첨부
+                  </Button>
+                </div>
+                {editCategory.imageMode === 'url' ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-category-image">대표 이미지 주소</Label>
+                    <Input id="edit-category-image" value={editCategory.image} onChange={(event) => setEditCategory((prev) => ({ ...prev, image: event.target.value }))} placeholder="https://example.com/category.jpg" />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-category-image-file">대표 이미지 파일</Label>
+                    <Input
+                      key={editCategoryInputKey}
+                      id="edit-category-image-file"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleEditCategoryImageFileChange}
+                    />
+                    <p className="text-sm text-muted-foreground">파일 첨부 모드에서는 새 이미지를 선택해야 합니다.</p>
+                  </div>
+                )}
+                {editCategoryPreviewUrl && (
+                  <div className="overflow-hidden rounded-2xl border border-border/60 bg-muted/30">
+                    <div className="flex aspect-[4/3] items-center justify-center overflow-hidden">
+                      <img src={editCategoryPreviewUrl} alt="카테고리 수정 미리보기" className="h-full w-full object-cover" />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-3">
+                <Label>노출여부</Label>
+                <div className="inline-flex rounded-xl border border-border/60 p-1">
+                  <Button type="button" variant={editCategory.visible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setEditCategory((prev) => ({ ...prev, visible: true }))}>O</Button>
+                  <Button type="button" variant={!editCategory.visible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setEditCategory((prev) => ({ ...prev, visible: false }))}>X</Button>
+                </div>
+              </div>
+              {categoryError && <Alert variant="destructive"><AlertDescription>{categoryError}</AlertDescription></Alert>}
+            </div>
+            <div className="shrink-0 border-t bg-background px-4 py-4 sm:px-6">
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <Button type="button" variant="outline" onClick={() => setEditCategoryOpen(false)}>취소</Button>
+                <Button type="submit" disabled={categorySaving}>{categorySaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />저장 중...</> : '저장'}</Button>
+              </div>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
@@ -2048,7 +3267,7 @@ export default function Admin() {
                     <Label htmlFor="edit-service-image-url">이미지 주소</Label>
                     <Input
                       id="edit-service-image-url"
-                      type="url"
+                      type="text"
                       value={editService.image}
                       onChange={(event) => setEditService((prev) => ({ ...prev, image: event.target.value }))}
                       placeholder="https://example.com/service.jpg"

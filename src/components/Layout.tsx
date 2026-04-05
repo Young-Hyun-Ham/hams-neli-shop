@@ -24,7 +24,7 @@ type NavItem = {
   sectionId?: (typeof HOME_SECTION_IDS)[number];
 };
 
-export const HOME_LOGO_TITLE = "Yu-mi Studio";
+export const HOME_LOGO_TITLE = "YUMMYNAIL SHOP";
 
 export function Layout({ children }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -102,6 +102,7 @@ export function Layout({ children }: LayoutProps) {
   const navItems = useMemo<NavItem[]>(
     () => [
       { to: ROUTE_PATHS.HOME, label: '홈', homeOnly: true },
+      { to: ROUTE_PATHS.EVENTS, label: '이벤트' },
       { to: '/#services', label: '서비스', isAnchor: true, sectionId: 'services' },
       { to: '/#pricing', label: '가격표', isAnchor: true, sectionId: 'pricing' },
       { to: ROUTE_PATHS.TESTIMONIALS, label: '고객후기' },
