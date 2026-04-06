@@ -32,6 +32,10 @@ const normalizeReservation = (
   phone: value.phone || '',
   serviceId: value.serviceId || '',
   serviceName: value.serviceName || '',
+  settlementAmount: value.settlementAmount || '',
+  settlementMemo: value.settlementMemo || '',
+  settlementUpdatedAt:
+    typeof value.settlementUpdatedAt === 'string' ? value.settlementUpdatedAt : '',
   status: 'confirmed',
   createdAt:
     value.createdAt instanceof Timestamp
@@ -127,6 +131,9 @@ export const reservationStorage = {
         phone,
         serviceId,
         serviceName,
+        settlementAmount: '',
+        settlementMemo: '',
+        settlementUpdatedAt: '',
         createdAt: new Date().toISOString(),
       });
 
@@ -237,5 +244,51 @@ export const reservationStorage = {
     }
 
     await deleteDoc(getReservationDocRef(date, time));
+  },
+
+  async updateReservationSettlement(
+    date: string,
+    time: string,
+    nextSettlement: Pick<Reservation, 'settlementAmount' | 'settlementMemo'>,
+  ): Promise<void> {
+    const settlementAmount = nextSettlement.settlementAmount?.trim() || '';
+    const settlementMemo = nextSettlement.settlementMemo?.trim() || '';
+    const settlementUpdatedAt = new Date().toISOString();
+
+    if (!isFirebaseConfigured) {
+      const reservations = readLocalReservations();
+      const currentIndex = reservations.findIndex(
+        (item) => item.date === date && item.time === time,
+      );
+
+      if (currentIndex === -1) {
+        throw new Error('RESERVATION_NOT_FOUND');
+      }
+
+      reservations[currentIndex] = {
+        ...reservations[currentIndex],
+        settlementAmount,
+        settlementMemo,
+        settlementUpdatedAt,
+      };
+
+      writeLocalReservations(sortReservations(reservations));
+      return;
+    }
+
+    const reservationDocRef = getReservationDocRef(date, time);
+
+    await runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(reservationDocRef);
+      if (!snapshot.exists()) {
+        throw new Error('RESERVATION_NOT_FOUND');
+      }
+
+      transaction.update(reservationDocRef, {
+        settlementAmount,
+        settlementMemo,
+        settlementUpdatedAt,
+      });
+    });
   },
 };

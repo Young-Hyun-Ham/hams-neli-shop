@@ -78,6 +78,15 @@ type ReservationEditState = {
   phone: string;
 };
 
+type SettlementEditState = {
+  date: string;
+  time: string;
+  customerName: string;
+  serviceName: string;
+  settlementAmount: string;
+  settlementMemo: string;
+};
+
 type ServiceImageMode = 'url' | 'file';
 type EventImageMode = 'url' | 'file';
 type CategoryImageMode = 'url' | 'file';
@@ -154,6 +163,15 @@ const initialReservationEditState: ReservationEditState = {
   phone: '',
 };
 
+const initialSettlementEditState: SettlementEditState = {
+  date: '',
+  time: '',
+  customerName: '',
+  serviceName: '',
+  settlementAmount: '',
+  settlementMemo: '',
+};
+
 const initialServiceEditState: ServiceEditState = {
   id: '',
   title: '',
@@ -218,6 +236,30 @@ const initialCategoryEditState: CategoryEditState = {
 
 const getMapEmbedUrl = (query: string) =>
   `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+
+const parseSettlementAmount = (value?: string) => {
+  if (!value) {
+    return 0;
+  }
+
+  const digits = value.replace(/[^\d]/g, '');
+  return digits ? Number(digits) : 0;
+};
+
+const getSettlementBreakdown = (value?: string) => {
+  const total = parseSettlementAmount(value);
+  const vat = total > 0 ? Math.round(total / 11) : 0;
+  const supply = total - vat;
+
+  return {
+    total,
+    supply,
+    vat,
+  };
+};
+
+const formatCurrency = (value: number) =>
+  `${new Intl.NumberFormat('ko-KR').format(value)}원`;
 
 const isSupportedVideoUrl = (value: string) => {
   try {
@@ -426,6 +468,9 @@ export default function Admin() {
   const [reservationDeletingKey, setReservationDeletingKey] = useState('');
   const [reservationDetailOpen, setReservationDetailOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [editSettlementOpen, setEditSettlementOpen] = useState(false);
+  const [editSettlement, setEditSettlement] = useState<SettlementEditState>(initialSettlementEditState);
+  const [settlementSaving, setSettlementSaving] = useState(false);
   const [editServiceOpen, setEditServiceOpen] = useState(false);
   const [editService, setEditService] = useState<ServiceEditState>(initialServiceEditState);
   const [editServiceFile, setEditServiceFile] = useState<File | null>(null);
@@ -468,6 +513,10 @@ export default function Admin() {
   const [reservationSearchStartDate, setReservationSearchStartDate] = useState('');
   const [reservationSearchEndDate, setReservationSearchEndDate] = useState('');
   const [reservationPage, setReservationPage] = useState(1);
+  const [settlementSearchStartDate, setSettlementSearchStartDate] = useState('');
+  const [settlementSearchEndDate, setSettlementSearchEndDate] = useState('');
+  const [settlementSearchName, setSettlementSearchName] = useState('');
+  const [settlementSearchPhone, setSettlementSearchPhone] = useState('');
 
   const previewMapUrl = useMemo(
     () => getMapEmbedUrl(searchKeyword || settings.mapQuery || settings.addressLine1),
@@ -486,6 +535,100 @@ export default function Admin() {
       return true;
     });
   }, [reservationSearchEndDate, reservationSearchStartDate, reservations]);
+  const filteredSettlementReservations = useMemo(() => {
+    const trimmedName = settlementSearchName.trim();
+    const trimmedPhone = settlementSearchPhone.trim();
+
+    return reservations.filter((reservation) => {
+      if (settlementSearchStartDate && reservation.date < settlementSearchStartDate) {
+        return false;
+      }
+
+      if (settlementSearchEndDate && reservation.date > settlementSearchEndDate) {
+        return false;
+      }
+
+      if (trimmedName && !reservation.name.trim().includes(trimmedName)) {
+        return false;
+      }
+
+      if (trimmedPhone) {
+        const reservationPhone = reservation.phone.replace(/[^\d]/g, '').trim();
+        if (!reservationPhone.includes(trimmedPhone)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [reservations, settlementSearchEndDate, settlementSearchName, settlementSearchPhone, settlementSearchStartDate]);
+  const settlementDateRangeLabel = useMemo(() => {
+    if (settlementSearchStartDate && settlementSearchEndDate) {
+      return `${settlementSearchStartDate} ~ ${settlementSearchEndDate}`;
+    }
+
+    if (settlementSearchStartDate) {
+      return `${settlementSearchStartDate} 이후`;
+    }
+
+    if (settlementSearchEndDate) {
+      return `${settlementSearchEndDate} 이전`;
+    }
+
+    return '전체 기간';
+  }, [settlementSearchEndDate, settlementSearchStartDate]);
+  const settlementSummary = useMemo(() => {
+    const byDate = new Map<string, number>();
+    const byService = new Map<string, number>();
+    let totalSettledAmount = 0;
+    let totalSettledSupplyAmount = 0;
+    let totalSettledVatAmount = 0;
+    let settledReservations = 0;
+
+    for (const reservation of filteredSettlementReservations) {
+      byDate.set(reservation.date, (byDate.get(reservation.date) ?? 0) + 1);
+
+      const serviceName = reservation.serviceName?.trim() || '미지정';
+      byService.set(serviceName, (byService.get(serviceName) ?? 0) + 1);
+
+      const amount = parseSettlementAmount(reservation.settlementAmount);
+      if (amount > 0) {
+        const breakdown = getSettlementBreakdown(reservation.settlementAmount);
+        totalSettledAmount += amount;
+        totalSettledSupplyAmount += breakdown.supply;
+        totalSettledVatAmount += breakdown.vat;
+        settledReservations += 1;
+      }
+    }
+
+    const dailyItems = [...byDate.entries()]
+      .map(([date, count]) => ({ date, count }))
+      .sort((left, right) => right.date.localeCompare(left.date));
+    const serviceItems = [...byService.entries()]
+      .map(([serviceName, count]) => ({ serviceName, count }))
+      .sort((left, right) => right.count - left.count || left.serviceName.localeCompare(right.serviceName));
+    const totalReservations = filteredSettlementReservations.length;
+    const activeDays = dailyItems.length;
+    const averageReservationsPerDay = activeDays > 0 ? totalReservations / activeDays : 0;
+
+    return {
+      totalReservations,
+      activeDays,
+      averageReservationsPerDay,
+      totalSettledAmount,
+      totalSettledSupplyAmount,
+      totalSettledVatAmount,
+      settledReservations,
+      latestReservationDate: dailyItems[0]?.date ?? '-',
+      topServiceName: serviceItems[0]?.serviceName ?? '-',
+      dailyItems,
+      serviceItems,
+    };
+  }, [filteredSettlementReservations]);
+  const editSettlementBreakdown = useMemo(
+    () => getSettlementBreakdown(editSettlement.settlementAmount),
+    [editSettlement.settlementAmount],
+  );
   const reservationTotalPages = Math.max(1, Math.ceil(filteredReservations.length / RESERVATIONS_PER_PAGE));
   const servicesTotalPages = Math.max(1, Math.ceil(services.length / SERVICES_PER_PAGE));
   const paginatedServices = useMemo(() => {
@@ -1781,6 +1924,23 @@ export default function Admin() {
     setReservationSearchEndDate(endDate);
   };
 
+  const applySettlementRange = (mode: 'today' | 'week' | 'month' | 'year') => {
+    const today = new Date();
+    const startDate = formatDateInputValue(today);
+
+    let endDate = startDate;
+    if (mode === 'week') {
+      endDate = formatDateInputValue(addDaysToDate(today, 7));
+    } else if (mode === 'month') {
+      endDate = formatDateInputValue(addMonthsToDate(today, 1));
+    } else if (mode === 'year') {
+      endDate = formatDateInputValue(addYearsToDate(today, 1));
+    }
+
+    setSettlementSearchStartDate(startDate);
+    setSettlementSearchEndDate(endDate);
+  };
+
   const openEditReservationDialog = (reservation: Reservation) => {
     setEditReservation({
       originalDate: reservation.date,
@@ -1798,6 +1958,20 @@ export default function Admin() {
   const openReservationDetailDialog = (reservation: Reservation) => {
     setSelectedReservation(reservation);
     setReservationDetailOpen(true);
+  };
+
+  const openEditSettlementDialog = (reservation: Reservation) => {
+    setEditSettlement({
+      date: reservation.date,
+      time: reservation.time,
+      customerName: reservation.name,
+      serviceName: reservation.serviceName?.trim() || '미지정',
+      settlementAmount: reservation.settlementAmount?.trim() || '',
+      settlementMemo: reservation.settlementMemo?.trim() || '',
+    });
+    setReservationError('');
+    setReservationMessage('');
+    setEditSettlementOpen(true);
   };
 
   const handleUpdateReservation = async (event: React.FormEvent) => {
@@ -1850,6 +2024,33 @@ export default function Admin() {
       setReservationError('예약 삭제 중 오류가 발생했습니다.');
     } finally {
       setReservationDeletingKey('');
+    }
+  };
+
+  const handleUpdateReservationSettlement = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!editSettlement.settlementAmount.trim()) {
+      setReservationError('정산 금액을 입력해 주세요.');
+      return;
+    }
+
+    setSettlementSaving(true);
+    setReservationError('');
+    setReservationMessage('');
+
+    try {
+      await reservationStorage.updateReservationSettlement(editSettlement.date, editSettlement.time, {
+        settlementAmount: editSettlement.settlementAmount.replace(/[^\d]/g, ''),
+        settlementMemo: editSettlement.settlementMemo.trim(),
+      });
+      setReservationMessage('예약 정산 정보를 저장했습니다.');
+      setEditSettlementOpen(false);
+    } catch (updateError) {
+      console.error('Failed to update reservation settlement:', updateError);
+      setReservationError('정산 정보 저장 중 오류가 발생했습니다.');
+    } finally {
+      setSettlementSaving(false);
     }
   };
 
@@ -1917,6 +2118,10 @@ export default function Admin() {
                 <TabsTrigger value="reservations" className="cursor-pointer rounded-xl px-3 py-2.5 sm:px-5">
                   <CalendarClock className="h-4 w-4 sm:mr-2" />
                   <span className="sr-only sm:not-sr-only">예약 현황</span>
+                </TabsTrigger>
+                <TabsTrigger value="settlements" className="cursor-pointer rounded-xl px-3 py-2.5 sm:px-5">
+                  <CircleDollarSign className="h-4 w-4 sm:mr-2" />
+                  <span className="sr-only sm:not-sr-only">정산 관리</span>
                 </TabsTrigger>
                 <TabsTrigger value="settings" className="cursor-pointer rounded-xl px-3 py-2.5 sm:px-5">
                   <Settings className="h-4 w-4 sm:mr-2" />
@@ -2855,6 +3060,251 @@ export default function Admin() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="settlements" className="space-y-8">
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-2xl">정산 관리</CardTitle>
+                  <CardDescription>예약별 정산 금액과 메모를 입력하고, 기간별 정산 현황을 함께 확인할 수 있습니다.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="rounded-2xl border border-border/60 p-4">
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+                      <div className="space-y-2">
+                        <Label htmlFor="settlement-search-start-date">정산 시작일자</Label>
+                        <Input
+                          id="settlement-search-start-date"
+                          type="date"
+                          value={settlementSearchStartDate}
+                          onChange={(event) => setSettlementSearchStartDate(event.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="settlement-search-end-date">정산 종료일자</Label>
+                        <Input
+                          id="settlement-search-end-date"
+                          type="date"
+                          value={settlementSearchEndDate}
+                          onChange={(event) => setSettlementSearchEndDate(event.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="settlement-search-name">이름</Label>
+                        <Input
+                          id="settlement-search-name"
+                          value={settlementSearchName}
+                          onChange={(event) => setSettlementSearchName(event.target.value)}
+                          placeholder="이름 검색"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="settlement-search-phone">전화번호</Label>
+                        <Input
+                          id="settlement-search-phone"
+                          value={settlementSearchPhone}
+                          onChange={(event) => setSettlementSearchPhone(event.target.value.replace(/[^\d]/g, ''))}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          placeholder="숫자만 입력"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setSettlementSearchStartDate('');
+                            setSettlementSearchEndDate('');
+                            setSettlementSearchName('');
+                            setSettlementSearchPhone('');
+                          }}
+                        >
+                          초기화
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => applySettlementRange('today')}>
+                        당일
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => applySettlementRange('week')}>
+                        1주일
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => applySettlementRange('month')}>
+                        1달
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => applySettlementRange('year')}>
+                        1년
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-2xl border border-border/60 bg-muted/10 p-5">
+                      <p className="text-sm text-muted-foreground">정산 기간</p>
+                      <p className="mt-2 text-lg font-semibold text-foreground">{settlementDateRangeLabel}</p>
+                    </div>
+                    <div className="rounded-2xl border border-border/60 bg-muted/10 p-5">
+                      <p className="text-sm text-muted-foreground">정산 완료 금액</p>
+                      <p className="mt-2 text-3xl font-semibold text-foreground">{formatCurrency(settlementSummary.totalSettledAmount)}</p>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        원가 {formatCurrency(settlementSummary.totalSettledSupplyAmount)} + 부가세 {formatCurrency(settlementSummary.totalSettledVatAmount)}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-border/60 bg-muted/10 p-5">
+                      <p className="text-sm text-muted-foreground">정산 완료 건수</p>
+                      <p className="mt-2 text-3xl font-semibold text-foreground">{settlementSummary.settledReservations}건</p>
+                    </div>
+                    <div className="rounded-2xl border border-border/60 bg-muted/10 p-5">
+                      <p className="text-sm text-muted-foreground">총 예약 건수</p>
+                      <p className="mt-2 text-3xl font-semibold text-foreground">{settlementSummary.totalReservations}건</p>
+                    </div>
+                    <div className="rounded-2xl border border-border/60 bg-muted/10 p-5">
+                      <p className="text-sm text-muted-foreground">일평균 예약</p>
+                      <p className="mt-2 text-3xl font-semibold text-foreground">{settlementSummary.averageReservationsPerDay.toFixed(1)}건</p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+                    <Card className="border-border/60 shadow-none">
+                      <CardHeader>
+                        <CardTitle className="text-xl">날짜별 정산 현황</CardTitle>
+                        <CardDescription>선택한 기간 안에서 날짜별 예약 건수를 집계합니다.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {loadingReservations ? (
+                          <div className="flex items-center justify-center py-12">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                          </div>
+                        ) : settlementSummary.dailyItems.length === 0 ? (
+                          <div className="py-12 text-center text-muted-foreground">정산할 예약 데이터가 없습니다.</div>
+                        ) : (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>날짜</TableHead>
+                                <TableHead className="text-right">예약 건수</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {settlementSummary.dailyItems.map((item) => (
+                                <TableRow key={item.date}>
+                                  <TableCell>{item.date}</TableCell>
+                                  <TableCell className="text-right font-medium">{item.count}건</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <div className="space-y-6">
+                      <Card className="border-border/60 shadow-none">
+                        <CardHeader>
+                          <CardTitle className="text-xl">서비스별 비중</CardTitle>
+                          <CardDescription>예약 시 선택한 서비스명을 기준으로 집계합니다.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          {loadingReservations ? (
+                            <div className="flex items-center justify-center py-12">
+                              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            </div>
+                          ) : settlementSummary.serviceItems.length === 0 ? (
+                            <div className="py-12 text-center text-muted-foreground">표시할 서비스 집계가 없습니다.</div>
+                          ) : (
+                            <div className="space-y-3">
+                              {settlementSummary.serviceItems.map((item) => {
+                                const ratio = settlementSummary.totalReservations > 0
+                                  ? (item.count / settlementSummary.totalReservations) * 100
+                                  : 0;
+
+                                return (
+                                  <div key={item.serviceName} className="space-y-2 rounded-2xl border border-border/60 p-4">
+                                    <div className="flex items-center justify-between gap-3">
+                                      <p className="font-medium text-foreground">{item.serviceName}</p>
+                                      <p className="text-sm text-muted-foreground">{item.count}건</p>
+                                    </div>
+                                    <div className="h-2 overflow-hidden rounded-full bg-muted">
+                                      <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(ratio, 4)}%` }} />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">{ratio.toFixed(1)}%</p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border-border/60 shadow-none">
+                        <CardHeader>
+                          <CardTitle className="text-xl">정산 메모</CardTitle>
+                          <CardDescription>현재 예약 데이터에 저장된 범위 기준으로 안내합니다.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3 text-sm text-muted-foreground">
+                          <p>최근 예약일: <span className="font-medium text-foreground">{settlementSummary.latestReservationDate}</span></p>
+                          <p>가장 많은 서비스: <span className="font-medium text-foreground">{settlementSummary.topServiceName}</span></p>
+                          <p>정산 완료 금액은 원가와 부가세를 합친 총액 기준으로 표시됩니다.</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+
+                  <Card className="border-border/60 shadow-none">
+                    <CardHeader>
+                      <CardTitle className="text-xl">정산 입력 대상 예약 목록</CardTitle>
+                      <CardDescription>각 예약 건에서 정산 입력 버튼을 눌러 금액과 메모를 저장합니다.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {reservationError && <Alert variant="destructive"><AlertDescription>{reservationError}</AlertDescription></Alert>}
+                      {reservationMessage && <Alert className="border-green-200 bg-green-50 text-green-800"><AlertDescription>{reservationMessage}</AlertDescription></Alert>}
+                      {loadingReservations ? (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                      ) : filteredSettlementReservations.length === 0 ? (
+                        <div className="py-12 text-center text-muted-foreground">선택한 기간에 해당하는 예약이 없습니다.</div>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>날짜</TableHead>
+                              <TableHead>시간</TableHead>
+                              <TableHead className="hidden md:table-cell">예약자</TableHead>
+                              <TableHead className="hidden md:table-cell">서비스</TableHead>
+                              <TableHead className="hidden md:table-cell">정산금액</TableHead>
+                              <TableHead className="hidden lg:table-cell">정산메모</TableHead>
+                              <TableHead className="hidden md:table-cell">연락처</TableHead>
+                              <TableHead className="w-[140px]">관리</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredSettlementReservations.map((reservation) => (
+                              <TableRow key={reservation.id}>
+                                <TableCell>{reservation.date}</TableCell>
+                                <TableCell>{reservation.time}</TableCell>
+                                <TableCell className="hidden md:table-cell">{reservation.name}</TableCell>
+                                <TableCell className="hidden md:table-cell">{reservation.serviceName?.trim() || '미지정'}</TableCell>
+                                <TableCell className="hidden md:table-cell">{reservation.settlementAmount?.trim() || '-'}</TableCell>
+                                <TableCell className="hidden max-w-xs whitespace-pre-line text-sm text-muted-foreground lg:table-cell">{reservation.settlementMemo?.trim() || '-'}</TableCell>
+                                <TableCell className="hidden md:table-cell">{reservation.phone}</TableCell>
+                                <TableCell>
+                                  <Button type="button" variant="outline" size="sm" className="gap-1 px-2" onClick={() => openEditSettlementDialog(reservation)}>
+                                    <Pencil className="mr-1 h-4 w-4" />
+                                    정산 입력
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </CardContent>
+                  </Card>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="settings">
               <Card className="shadow-lg">
                 <CardHeader><CardTitle className="text-2xl">사이트 정보 및 영업시간 설정</CardTitle><CardDescription>영업시간, 휴무일, 주소와 연락처 정보를 관리합니다.</CardDescription></CardHeader>
@@ -3347,45 +3797,52 @@ export default function Admin() {
       </Dialog>
 
       <Dialog open={reservationDetailOpen} onOpenChange={setReservationDetailOpen}>
-        <DialogContent className="w-[calc(100vw-1rem)] max-w-lg sm:w-[calc(100vw-3rem)]">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-h-[calc(100dvh-3rem)] sm:w-[calc(100vw-3rem)]">
+          <DialogHeader className="shrink-0 px-4 pb-4 pt-6 sm:px-6">
             <DialogTitle>예약 상세</DialogTitle>
             <DialogDescription>선택한 예약의 상세 정보를 확인할 수 있습니다.</DialogDescription>
           </DialogHeader>
           {selectedReservation ? (
-            <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-xl border border-border/60 p-4">
-                  <p className="text-sm text-muted-foreground">날짜</p>
-                  <p className="mt-1 font-medium text-foreground">{selectedReservation.date}</p>
-                </div>
-                <div className="rounded-xl border border-border/60 p-4">
-                  <p className="text-sm text-muted-foreground">시간</p>
-                  <p className="mt-1 font-medium text-foreground">{selectedReservation.time}</p>
-                </div>
-                <div className="rounded-xl border border-border/60 p-4">
-                  <p className="text-sm text-muted-foreground">이름</p>
-                  <p className="mt-1 font-medium text-foreground">{selectedReservation.name}</p>
-                </div>
-                <div className="rounded-xl border border-border/60 p-4">
-                  <p className="text-sm text-muted-foreground">연락처</p>
-                  <p className="mt-1 font-medium text-foreground">{selectedReservation.phone}</p>
+            <>
+              <div className="flex-1 overflow-y-auto px-4 pb-4 sm:px-6">
+                <div className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-xl border border-border/60 p-4">
+                      <p className="text-sm text-muted-foreground">날짜</p>
+                      <p className="mt-1 font-medium text-foreground">{selectedReservation.date}</p>
+                    </div>
+                    <div className="rounded-xl border border-border/60 p-4">
+                      <p className="text-sm text-muted-foreground">시간</p>
+                      <p className="mt-1 font-medium text-foreground">{selectedReservation.time}</p>
+                    </div>
+                    <div className="rounded-xl border border-border/60 p-4">
+                      <p className="text-sm text-muted-foreground">이름</p>
+                      <p className="mt-1 font-medium text-foreground">{selectedReservation.name}</p>
+                    </div>
+                    <div className="rounded-xl border border-border/60 p-4">
+                      <p className="text-sm text-muted-foreground">연락처</p>
+                      <p className="mt-1 font-medium text-foreground">{selectedReservation.phone}</p>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-border/60 p-4">
+                    <p className="text-sm text-muted-foreground">상태</p>
+                    <p className="mt-1 font-medium text-foreground">확정</p>
+                  </div>
                 </div>
               </div>
-              <div className="rounded-xl border border-border/60 p-4">
-                <p className="text-sm text-muted-foreground">상태</p>
-                <p className="mt-1 font-medium text-foreground">확정</p>
+              <div className="shrink-0 border-t bg-background px-4 py-4 sm:px-6">
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                  <Button type="button" variant="outline" onClick={() => { setReservationDetailOpen(false); openEditReservationDialog(selectedReservation); }}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    수정
+                  </Button>
+                  <Button type="button" onClick={() => setReservationDetailOpen(false)}>
+                    닫기
+                  </Button>
+                </div>
               </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <Button type="button" variant="outline" onClick={() => { setReservationDetailOpen(false); openEditReservationDialog(selectedReservation); }}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  수정
-                </Button>
-                <Button type="button" onClick={() => setReservationDetailOpen(false)}>
-                  닫기
-                </Button>
-              </div>
-            </div>
+            </>
+            
           ) : null}
         </DialogContent>
       </Dialog>
@@ -3401,6 +3858,84 @@ export default function Admin() {
             <div className="space-y-2"><Label htmlFor="edit-reservation-name">이름</Label><Input id="edit-reservation-name" value={editReservation.name} onChange={(event) => setEditReservation((prev) => ({ ...prev, name: event.target.value }))} /></div>
             <div className="space-y-2"><Label htmlFor="edit-reservation-phone">연락처</Label><Input id="edit-reservation-phone" value={editReservation.phone} onChange={(event) => setEditReservation((prev) => ({ ...prev, phone: event.target.value }))} /></div>
             <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setEditReservationOpen(false)}>취소</Button><Button type="submit" disabled={reservationSaving}>{reservationSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />저장 중...</> : '저장'}</Button></div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editSettlementOpen} onOpenChange={setEditSettlementOpen}>
+        <DialogContent className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-h-[calc(100dvh-3rem)] sm:w-[calc(100vw-3rem)]">
+          <div className="shrink-0 border-b px-4 py-4 sm:px-6">
+            <DialogHeader>
+              <DialogTitle>정산 입력</DialogTitle>
+              <DialogDescription>예약별 정산 금액과 메모를 저장할 수 있습니다.</DialogDescription>
+            </DialogHeader>
+          </div>
+          <form onSubmit={handleUpdateReservationSettlement} className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="settlement-date">날짜</Label>
+                  <Input id="settlement-date" value={editSettlement.date} disabled />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="settlement-time">시간</Label>
+                  <Input id="settlement-time" value={editSettlement.time} disabled />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="settlement-customer-name">예약자</Label>
+                  <Input id="settlement-customer-name" value={editSettlement.customerName} disabled />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="settlement-service-name">서비스</Label>
+                  <Input id="settlement-service-name" value={editSettlement.serviceName} disabled />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="settlement-amount">정산 금액</Label>
+                <Input
+                  id="settlement-amount"
+                  value={editSettlement.settlementAmount}
+                  onChange={(event) => setEditSettlement((prev) => ({ ...prev, settlementAmount: event.target.value.replace(/[^\d]/g, '') }))}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="예: 50000"
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                  <p className="text-sm text-muted-foreground">입력 금액</p>
+                  <p className="mt-2 font-semibold text-foreground">{formatCurrency(editSettlementBreakdown.total)}</p>
+                </div>
+                <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                  <p className="text-sm text-muted-foreground">원가</p>
+                  <p className="mt-2 font-semibold text-foreground">{formatCurrency(editSettlementBreakdown.supply)}</p>
+                </div>
+                <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                  <p className="text-sm text-muted-foreground">부가세</p>
+                  <p className="mt-2 font-semibold text-foreground">{formatCurrency(editSettlementBreakdown.vat)}</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="settlement-memo">정산 메모</Label>
+                <Textarea
+                  id="settlement-memo"
+                  value={editSettlement.settlementMemo}
+                  onChange={(event) => setEditSettlement((prev) => ({ ...prev, settlementMemo: event.target.value }))}
+                  rows={4}
+                  placeholder="결제수단, 추가 메모 등을 입력해 주세요."
+                />
+              </div>
+            </div>
+            <div className="shrink-0 border-t bg-background px-4 py-4 sm:px-6">
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setEditSettlementOpen(false)}>취소</Button>
+                <Button type="submit" disabled={settlementSaving}>
+                  {settlementSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />저장 중...</> : '저장'}
+                </Button>
+              </div>
+            </div>
           </form>
         </DialogContent>
       </Dialog>

@@ -113,6 +113,9 @@ export interface Reservation {
   phone: string;
   serviceId?: string;
   serviceName?: string;
+  settlementAmount?: string;
+  settlementMemo?: string;
+  settlementUpdatedAt?: string;
   status: 'confirmed';
   createdAt: string;
 }

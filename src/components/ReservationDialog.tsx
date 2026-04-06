@@ -368,10 +368,12 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
               id="reservation-phone"
               value={customerPhone}
               onChange={(event) => {
-                setCustomerPhone(event.target.value);
+                setCustomerPhone(event.target.value.replace(/[^\d]/g, ''));
                 setError('');
               }}
-              placeholder="010-1234-5678"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="숫자만 입력하세요"
             />
           </div>
         </div>
