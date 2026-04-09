@@ -10,6 +10,14 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_STORAGE_BUCKET: string;
   readonly VITE_FIREBASE_MESSAGING_SENDER_ID: string;
   readonly VITE_FIREBASE_APP_ID: string;
+  readonly VITE_SSO_AUTH_ORIGIN: string;
+  readonly VITE_SSO_CLIENT_ID: string;
+  readonly VITE_SSO_CALLBACK_PATH: string;
+  readonly VITE_SSO_LOGIN_START_PATH: string;
+  readonly VITE_SERVICE_ORIGIN: string;
+  readonly VITE_SSO_ME_ENDPOINT: string;
+  readonly VITE_SSO_LOGOUT_ENDPOINT: string;
+  readonly VITE_SERVICE_SESSION_HINT_COOKIE_NAME: string;
 }
 
 interface ImportMeta {

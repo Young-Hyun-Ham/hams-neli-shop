@@ -1,10 +1,13 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Mail, MapPin, Menu, Phone, X } from 'lucide-react';
+import { LogIn, LogOut, Mail, MapPin, Menu, Phone, X } from 'lucide-react';
 import { SiFacebook, SiInstagram, SiKakao, SiTiktok, SiX } from 'react-icons/si';
+
 import { DEFAULT_SITE_SETTINGS, ROUTE_PATHS, type SiteSettings } from '@/lib/index';
 import { settingsStorage } from '@/lib/settingsStorage';
+import { beginSSOLogin, logoutService } from '@/lib/sso';
+import { useAuthStore } from '@/lib/auth-store';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -14,7 +17,6 @@ const PENDING_SCROLL_KEY = 'pending-home-scroll-target';
 const REVIEW_IMAGE_DRAFT_KEY = 'pending-testimonial-images';
 const REVIEW_EDIT_DRAFT_KEY = 'testimonial-edit-draft';
 const HOME_SECTION_IDS = ['services', 'pricing', 'contact'] as const;
-const hasVisibleSocialLink = (value: string) => value.trim().length > 0;
 
 type NavItem = {
   to: string;
@@ -24,12 +26,20 @@ type NavItem = {
   sectionId?: (typeof HOME_SECTION_IDS)[number];
 };
 
-export const HOME_LOGO_TITLE = "YUMMYNAIL SHOP";
+export const HOME_LOGO_TITLE = 'YUMMYNAIL SHOP';
+
+const hasVisibleSocialLink = (value: string) => value.trim().length > 0;
 
 export function Layout({ children }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('');
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
+  const viewer = useAuthStore((state) => state.viewer);
+  const authLoading = useAuthStore((state) => state.authLoading);
+  const logoutPending = useAuthStore((state) => state.logoutPending);
+  const hydrateSession = useAuthStore((state) => state.hydrateSession);
+  const clearSession = useAuthStore((state) => state.clearSession);
+  const setLogoutPending = useAuthStore((state) => state.setLogoutPending);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -59,6 +69,10 @@ export function Layout({ children }: LayoutProps) {
   }, []);
 
   useEffect(() => {
+    void hydrateSession();
+  }, [hydrateSession]);
+
+  useEffect(() => {
     if (location.pathname !== ROUTE_PATHS.HOME) {
       setActiveSection('');
       return;
@@ -83,7 +97,9 @@ export function Layout({ children }: LayoutProps) {
           return;
         }
 
-        const firstSectionTop = sections[0]?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY;
+        const firstSectionTop =
+          sections[0]?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY;
+
         if (firstSectionTop > 160) {
           setActiveSection('');
         }
@@ -127,6 +143,7 @@ export function Layout({ children }: LayoutProps) {
 
   const handleAnchorClick = (to: string) => {
     const hash = to.split('#')[1];
+
     if (!hash) {
       return;
     }
@@ -134,7 +151,10 @@ export function Layout({ children }: LayoutProps) {
     setActiveSection(hash);
 
     if (location.pathname === ROUTE_PATHS.HOME) {
-      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById(hash)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
       return;
     }
 
@@ -152,6 +172,28 @@ export function Layout({ children }: LayoutProps) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleLoginClick = () => {
+    try {
+      beginSSOLogin();
+    } catch (error) {
+      console.error('Failed to start SSO login:', error);
+    }
+  };
+
+  const handleLogoutClick = async () => {
+    try {
+      setLogoutPending(true);
+      await logoutService();
+      clearSession();
+      navigate(ROUTE_PATHS.HOME);
+    } catch (error) {
+      console.error('Failed to logout from service:', error);
+    } finally {
+      setLogoutPending(false);
+      setMobileMenuOpen(false);
+    }
+  };
+
   const getNavClassName = (active: boolean) =>
     `cursor-pointer font-medium transition-colors duration-200 ${
       active ? 'text-primary' : 'text-foreground/80 hover:text-primary'
@@ -167,6 +209,8 @@ export function Layout({ children }: LayoutProps) {
 
     return location.pathname === to;
   };
+
+  const authActionLabel = authLoading ? '확인 중...' : viewer ? '로그아웃' : '로그인';
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -225,14 +269,27 @@ export function Layout({ children }: LayoutProps) {
               )}
             </nav>
 
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen((prev) => !prev)}
-              className="cursor-pointer rounded-lg p-2 transition-colors hover:bg-muted md:hidden"
-              aria-label="메뉴 열기"
-            >
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+            <div className="flex items-center gap-2">
+              {/* 통합로그인 처리
+              <button
+                type="button"
+                onClick={viewer ? handleLogoutClick : handleLoginClick}
+                disabled={authLoading || logoutPending}
+                className="hidden items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60 md:inline-flex"
+              >
+                {viewer ? <LogOut size={16} /> : <LogIn size={16} />}
+                <span>{logoutPending ? '로그아웃 중...' : authActionLabel}</span>
+              </button>
+              */}
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen((prev) => !prev)}
+                className="cursor-pointer rounded-lg p-2 transition-colors hover:bg-muted md:hidden"
+                aria-label="메뉴 열기"
+              >
+                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -278,13 +335,27 @@ export function Layout({ children }: LayoutProps) {
                         }
                       }}
                       className={() =>
-                        `cursor-pointer py-2 ${getNavClassName(isRouteActive(item.to, item.homeOnly))}`
+                        `cursor-pointer py-2 ${getNavClassName(
+                          isRouteActive(item.to, item.homeOnly),
+                        )}`
                       }
                     >
                       {item.label}
                     </NavLink>
                   ),
                 )}
+
+                {/* 통합로그인 처리
+                <button
+                  type="button"
+                  onClick={viewer ? handleLogoutClick : handleLoginClick}
+                  disabled={authLoading || logoutPending}
+                  className="flex cursor-pointer items-center gap-2 py-2 text-left font-medium text-foreground/80 transition-colors duration-200 hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {viewer ? <LogOut size={18} /> : <LogIn size={18} />}
+                  <span>{logoutPending ? '로그아웃 중...' : authActionLabel}</span>
+                </button>
+                */}
               </nav>
             </motion.div>
           )}

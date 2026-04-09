@@ -10,6 +10,8 @@ import { DEFAULT_SITE_SETTINGS, type EventItem, type SiteSettings } from '@/lib/
 import { DEFAULT_EVENT_ITEMS, eventStorage, isEventActive } from '@/lib/eventStorage';
 import { settingsStorage } from '@/lib/settingsStorage';
 
+import { useAuthStore } from '@/lib/auth-store';
+
 const getStatusLabel = (event: EventItem) => {
   const today = new Date();
   const date = `${today.getFullYear()}-${`${today.getMonth() + 1}`.padStart(2, '0')}-${`${today.getDate()}`.padStart(2, '0')}`;
@@ -30,6 +32,8 @@ const getStatusLabel = (event: EventItem) => {
 };
 
 export default function Events() {
+  const viewer = useAuthStore((state) => state.viewer);
+  // console.log("event login data ==========>", viewer)
   const [events, setEvents] = useState<EventItem[]>(DEFAULT_EVENT_ITEMS);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
   const [reservationOpen, setReservationOpen] = useState(false);

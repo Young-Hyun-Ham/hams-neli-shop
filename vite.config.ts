@@ -6,16 +6,197 @@ import fs from 'node:fs/promises';
 import nodePath from 'node:path';
 import { componentTagger } from 'lovable-tagger';
 import path from "path";
+import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import { parse } from '@babel/parser';
 import _traverse from '@babel/traverse';
 import _generate from '@babel/generator';
 import * as t from '@babel/types';
+import {
+  clearServiceSession,
+  createSSOStateCookie,
+  createServiceSessionCookie,
+  getClearedSSOStateCookieHeader,
+  getSSOStateFromRequest,
+  getServiceViewerFromRequest,
+} from './server/sso-session';
 
 
 // CJS/ESM interop for Babel libs
 const traverse: typeof _traverse.default = ( (_traverse as any).default ?? _traverse ) as any;
 const generate: typeof _generate.default = ( (_generate as any).default ?? _generate ) as any;
+
+function writeJson(res: ServerResponse, statusCode: number, body: unknown) {
+  res.statusCode = statusCode;
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.end(JSON.stringify(body));
+}
+
+function redirect(res: ServerResponse, location: string, setCookie?: string | string[]) {
+  res.statusCode = 302;
+
+  if (setCookie) {
+    res.setHeader('Set-Cookie', setCookie);
+  }
+
+  res.setHeader('Location', location);
+  res.end();
+}
+
+function createState() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function getServiceSSOConfig() {
+  const authOrigin = process.env.VITE_SSO_AUTH_ORIGIN || 'http://localhost:3000';
+  const clientId = process.env.VITE_SSO_CLIENT_ID || 'service-3002';
+  const serviceOrigin = process.env.VITE_SERVICE_ORIGIN || 'http://localhost:3002';
+  const callbackPath = process.env.VITE_SSO_CALLBACK_PATH || '/auth/sso/callback';
+  const exchangePath = process.env.VITE_SSO_EXCHANGE_PATH || '/api/sso/exchange';
+  const clientSecret = process.env.SERVICE_SSO_CLIENT_SECRET || 'dev-service-3002-secret';
+
+  return {
+    authOrigin,
+    clientId,
+    serviceOrigin,
+    callbackPath,
+    exchangeUrl: new URL(exchangePath, authOrigin).toString(),
+    clientSecret,
+    redirectUri: new URL(callbackPath, serviceOrigin).toString(),
+    loginStartPath: process.env.VITE_SSO_LOGIN_START_PATH || '/auth/sso/login',
+  };
+}
+
+function createServiceAuthApiPlugin(): Plugin {
+  const handler = async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+    const url = req.url ? new URL(req.url, 'http://localhost') : null;
+
+    if (!url) {
+      next();
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/me') {
+      const user = getServiceViewerFromRequest(req);
+
+      if (!user) {
+        writeJson(res, 401, { user: null });
+        return;
+      }
+
+      writeJson(res, 200, { user });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/logout') {
+      clearServiceSession(res);
+      writeJson(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === getServiceSSOConfig().loginStartPath) {
+      const { authOrigin, clientId, redirectUri } = getServiceSSOConfig();
+      const state = createState();
+      const authUrl = new URL('/sso/start', authOrigin);
+
+      authUrl.searchParams.set('client_id', clientId);
+      authUrl.searchParams.set('redirect_uri', redirectUri);
+      authUrl.searchParams.set('state', state);
+
+      redirect(res, authUrl.toString(), createSSOStateCookie(state));
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === getServiceSSOConfig().callbackPath) {
+      const { exchangeUrl, clientId, clientSecret, redirectUri, serviceOrigin } =
+        getServiceSSOConfig();
+      const code = url.searchParams.get('code')?.trim() ?? '';
+      const state = url.searchParams.get('state')?.trim() ?? '';
+      const storedState = getSSOStateFromRequest(req);
+
+      if (!code || !state || !storedState || storedState !== state) {
+        redirect(
+          res,
+          new URL('/?sso=invalid_state', serviceOrigin).toString(),
+          getClearedSSOStateCookieHeader(),
+        );
+        return;
+      }
+
+      try {
+        const exchangeResponse = await fetch(exchangeUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            client_id: clientId,
+            client_secret: clientSecret,
+            code,
+            redirect_uri: redirectUri,
+          }),
+        });
+
+        if (!exchangeResponse.ok) {
+          redirect(
+            res,
+            new URL('/?sso=exchange_failed', serviceOrigin).toString(),
+            getClearedSSOStateCookieHeader(),
+          );
+          return;
+        }
+
+        const payload = (await exchangeResponse.json()) as {
+          ok?: boolean;
+          user?: {
+            id: string;
+            loginId: string;
+            email: string;
+            nickname: string;
+            provider: string;
+          };
+        };
+
+        if (!payload.ok || !payload.user) {
+          redirect(
+            res,
+            new URL('/?sso=exchange_failed', serviceOrigin).toString(),
+            getClearedSSOStateCookieHeader(),
+          );
+          return;
+        }
+
+        redirect(
+          res,
+          new URL('/', serviceOrigin).toString(),
+          [getClearedSSOStateCookieHeader(), ...createServiceSessionCookie(payload.user)],
+        );
+        return;
+      } catch (error) {
+        console.error('Failed to exchange SSO code:', error);
+        redirect(
+          res,
+          new URL('/?sso=exchange_failed', serviceOrigin).toString(),
+          getClearedSSOStateCookieHeader(),
+        );
+        return;
+      }
+    }
+
+    next();
+  };
+
+  return {
+    name: 'service-auth-api',
+    configureServer(server) {
+      server.middlewares.use(handler);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(handler);
+    },
+  };
+}
 
 function cdnPrefixImages(): Plugin {
   const DEBUG = process.env.CDN_IMG_DEBUG === '1';
@@ -80,7 +261,7 @@ function cdnPrefixImages(): Plugin {
     let rewrites = 0;
 
     traverse(ast, {
-      JSXAttribute(path) {
+      JSXAttribute(path: any) {
         const name = (path.node.name as t.JSXIdentifier).name;
         const isSrc = name === 'src' || name === 'href';
         const isSrcSet = name === 'srcSet' || name === 'srcset';
@@ -104,23 +285,23 @@ function cdnPrefixImages(): Plugin {
         }
       },
 
-      StringLiteral(path) {
+      StringLiteral(path: any) {
         // skip object keys: { "image": "..." }
         if (t.isObjectProperty(path.parent) && path.parentKey === 'key' && !path.parent.computed) return;
         // skip import/export sources
         if (t.isImportDeclaration(path.parent) || t.isExportAllDeclaration(path.parent) || t.isExportNamedDeclaration(path.parent)) return;
         // skip inside JSX attribute (already handled)
-        if (path.findParent(p => p.isJSXAttribute())) return;
+        if (path.findParent((p: any) => p.isJSXAttribute())) return;
 
         const before = path.node.value;
         const after = toCDN(before, cdn);
         if (after !== before) { path.node.value = after; rewrites++; }
       },
 
-      TemplateLiteral(path) {
+      TemplateLiteral(path: any) {
         // handle `"/images/foo.png"` as template with NO expressions
         if (path.node.expressions.length) return;
-        const raw = path.node.quasis.map(q => q.value.cooked ?? q.value.raw).join('');
+        const raw = path.node.quasis.map((q: any) => q.value.cooked ?? q.value.raw).join('');
         const after = toCDN(raw, cdn);
         if (after !== raw) {
           path.replaceWith(t.stringLiteral(after));
@@ -207,16 +388,23 @@ function cdnPrefixImages(): Plugin {
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
+  const servicePort = Number(process.env.VITE_SERVICE_PORT || '3002');
+
   return {
     server: {
       host: "::",
-      port: 8080,
+      port: servicePort,
+    },
+    preview: {
+      host: "::",
+      port: servicePort,
     },
     plugins: [
       tailwindcss(),
       react(),
       mode === 'development' &&
       componentTagger(),
+      createServiceAuthApiPlugin(),
       cdnPrefixImages(),
     ].filter(Boolean),
     resolve: {

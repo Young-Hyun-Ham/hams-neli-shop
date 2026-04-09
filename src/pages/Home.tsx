@@ -26,6 +26,8 @@ import { settingsStorage } from '@/lib/settingsStorage';
 import { testimonialStorage } from '@/lib/testimonialStorage';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
+import { useAuthStore } from '@/lib/auth-store';
+
 const PENDING_SCROLL_KEY = 'pending-home-scroll-target';
 const SERVICES_CACHE_KEY = 'home-services-cache';
 const PRICES_CACHE_KEY = 'home-prices-cache';
@@ -124,6 +126,8 @@ const persistPrices = (items: PriceItem[]) => {
 };
 
 export default function Home() {
+  const viewer = useAuthStore((state) => state.viewer);
+  // console.log("home login data ==========>", viewer)
   const [serviceItems, setServiceItems] = useState<Service[]>(readCachedServices);
   const [priceList, setPriceList] = useState<PriceItem[]>(readCachedPrices);
   const [testimonialItems, setTestimonialItems] = useState<Testimonial[]>(testimonials);
