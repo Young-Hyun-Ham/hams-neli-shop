@@ -7,7 +7,7 @@ import {
   getClearedSSOStateCookieHeader,
   getSSOStateFromRequest,
   getServiceViewerFromRequest,
-} from './sso-session';
+} from './sso-session.js';
 
 type Next = () => void;
 
@@ -71,6 +71,7 @@ export function getServiceSSOConfig() {
     ['SSO_LOGIN_START_PATH', 'VITE_SSO_LOGIN_START_PATH'],
     '/auth/sso/login',
   );
+  // console.log("====================>", authOrigin, clientId)
 
   return {
     authOrigin,
