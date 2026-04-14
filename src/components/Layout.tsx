@@ -345,7 +345,7 @@ export function Layout({ children }: LayoutProps) {
                   ),
                 )}
 
-                {/* 통합로그인 처리
+                {/* 통합로그인 처리*/}
                 <button
                   type="button"
                   onClick={viewer ? handleLogoutClick : handleLoginClick}
@@ -355,7 +355,7 @@ export function Layout({ children }: LayoutProps) {
                   {viewer ? <LogOut size={18} /> : <LogIn size={18} />}
                   <span>{logoutPending ? '로그아웃 중...' : authActionLabel}</span>
                 </button>
-                */}
+                
               </nav>
             </motion.div>
           )}
