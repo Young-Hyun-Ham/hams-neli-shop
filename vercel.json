@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/auth/sso/login",
+      "destination": "/api/auth/sso/login"
+    },
+    {
+      "source": "/auth/sso/callback",
+      "destination": "/api/auth/sso/callback"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
