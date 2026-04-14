@@ -189,6 +189,21 @@ async function handleCallback(req: IncomingMessage, res: ServerResponse, url: UR
   }
 }
 
+export async function handleServiceSSOLogin(req: IncomingMessage, res: ServerResponse) {
+  return handleLoginStart(req, res);
+}
+
+export async function handleServiceSSOCallback(req: IncomingMessage, res: ServerResponse) {
+  const url = getRequestUrl(req);
+
+  if (!url) {
+    writeJson(res, 400, { error: 'invalid_request_url' });
+    return false;
+  }
+
+  return handleCallback(req, res, url);
+}
+
 export async function handleServiceApiRequest(
   req: IncomingMessage,
   res: ServerResponse,
