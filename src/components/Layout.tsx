@@ -270,7 +270,7 @@ export function Layout({ children }: LayoutProps) {
             </nav>
 
             <div className="flex items-center gap-2">
-              {/* 통합로그인 처리
+              {/* 통합로그인 처리*/}
               <button
                 type="button"
                 onClick={viewer ? handleLogoutClick : handleLoginClick}
@@ -280,7 +280,7 @@ export function Layout({ children }: LayoutProps) {
                 {viewer ? <LogOut size={16} /> : <LogIn size={16} />}
                 <span>{logoutPending ? '로그아웃 중...' : authActionLabel}</span>
               </button>
-              */}
+              
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen((prev) => !prev)}
