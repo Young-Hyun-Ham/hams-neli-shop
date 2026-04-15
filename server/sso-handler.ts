@@ -1,3 +1,4 @@
+import { createCipheriv, createHash, randomBytes } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import {
@@ -23,6 +24,17 @@ type ExchangeResponsePayload = {
   ok?: boolean;
   user?: ServiceViewer;
 };
+
+type LogoutTokenPayload = {
+  logout: true;
+  service: string;
+  returnTo: string;
+  loginStartUrl: string;
+  issuedAt: number;
+  expiresAt: number;
+};
+
+const LOGOUT_TOKEN_TTL_MS = 1000 * 60 * 5;
 
 function getEnv(names: string[], fallback?: string) {
   for (const name of names) {
@@ -57,6 +69,22 @@ function createState() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+function getEncryptionKey(secret: string) {
+  return createHash('sha256').update(secret).digest();
+}
+
+function encryptLogoutToken(payload: LogoutTokenPayload, secret: string) {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', getEncryptionKey(secret), iv);
+  const encrypted = Buffer.concat([
+    cipher.update(JSON.stringify(payload), 'utf8'),
+    cipher.final(),
+  ]);
+  const tag = cipher.getAuthTag();
+
+  return `${iv.toString('base64url')}.${encrypted.toString('base64url')}.${tag.toString('base64url')}`;
+}
+
 export function getServiceSSOConfig() {
   const authOrigin = getEnv(['SSO_AUTH_ORIGIN', 'VITE_SSO_AUTH_ORIGIN'], 'http://localhost:3000');
   const clientId = getEnv(['SSO_CLIENT_ID', 'VITE_SSO_CLIENT_ID'], 'service-3001');
@@ -71,7 +99,6 @@ export function getServiceSSOConfig() {
     ['SSO_LOGIN_START_PATH', 'VITE_SSO_LOGIN_START_PATH'],
     '/auth/sso/login',
   );
-  // console.log("====================>", authOrigin, clientId)
 
   return {
     authOrigin,
@@ -83,6 +110,24 @@ export function getServiceSSOConfig() {
     redirectUri: new URL(callbackPath, serviceOrigin).toString(),
     loginStartPath,
   };
+}
+
+function createServiceLogoutRedirectUrl() {
+  const { authOrigin, clientId, clientSecret, serviceOrigin, loginStartPath } = getServiceSSOConfig();
+  const issuedAt = Date.now();
+  const payload = {
+    logout: true,
+    service: clientId,
+    returnTo: serviceOrigin,
+    loginStartUrl: new URL(loginStartPath, serviceOrigin).toString(),
+    issuedAt,
+    expiresAt: issuedAt + LOGOUT_TOKEN_TTL_MS,
+  } satisfies LogoutTokenPayload;
+  const token = encryptLogoutToken(payload, clientSecret);
+  const logoutUrl = new URL('/sso/logout', authOrigin);
+
+  logoutUrl.searchParams.set('sso_logout_token', token);
+  return logoutUrl.toString();
 }
 
 function getRequestUrl(req: IncomingMessage) {
@@ -231,7 +276,10 @@ export async function handleServiceApiRequest(
 
   if (req.method === 'POST' && url.pathname === '/api/logout') {
     clearServiceSession(res);
-    writeJson(res, 200, { ok: true });
+    writeJson(res, 200, {
+      ok: true,
+      redirectUrl: createServiceLogoutRedirectUrl(),
+    });
     return true;
   }
 

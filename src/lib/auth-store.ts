@@ -2,7 +2,6 @@ import { create } from 'zustand';
 
 import {
   fetchServiceViewer,
-  hasServiceSessionHint,
   type ServiceViewer,
 } from '@/lib/sso';
 
@@ -20,14 +19,6 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
   authLoading: true,
   logoutPending: false,
   hydrateSession: async () => {
-    if (!hasServiceSessionHint()) {
-      set({
-        viewer: null,
-        authLoading: false,
-      });
-      return;
-    }
-
     set({ authLoading: true });
 
     try {

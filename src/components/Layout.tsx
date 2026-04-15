@@ -183,9 +183,8 @@ export function Layout({ children }: LayoutProps) {
   const handleLogoutClick = async () => {
     try {
       setLogoutPending(true);
-      await logoutService();
       clearSession();
-      navigate(ROUTE_PATHS.HOME);
+      await logoutService();
     } catch (error) {
       console.error('Failed to logout from service:', error);
     } finally {

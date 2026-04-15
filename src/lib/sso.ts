@@ -6,6 +6,11 @@ export type ServiceViewer = {
   provider: string;
 };
 
+type LogoutResponse = {
+  ok?: boolean;
+  redirectUrl?: string;
+};
+
 function getRequiredEnv(name: keyof ImportMetaEnv, fallback?: string) {
   const value = import.meta.env[name] || fallback;
 
@@ -77,7 +82,7 @@ export async function fetchServiceViewer() {
 }
 
 export async function logoutService() {
-  const { logoutEndpoint } = getSSOConfig();
+  const { logoutEndpoint, authOrigin } = getSSOConfig();
   const response = await fetch(logoutEndpoint, {
     method: 'POST',
     credentials: 'include',
@@ -88,5 +93,12 @@ export async function logoutService() {
 
   if (!response.ok) {
     throw new Error('Failed to logout from service.');
+  }
+
+  const payload = (await response.json().catch((e: any) => null)) as LogoutResponse | null;
+  const redirectUrl = payload?.redirectUrl || authOrigin;
+
+  if (typeof window !== 'undefined') {
+    window.location.assign(redirectUrl);
   }
 }
