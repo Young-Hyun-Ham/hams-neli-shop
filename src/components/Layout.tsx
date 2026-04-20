@@ -29,6 +29,12 @@ type NavItem = {
 export const HOME_LOGO_TITLE = 'YUMMYNAIL SHOP';
 
 const hasVisibleSocialLink = (value: string) => value.trim().length > 0;
+const adminEmailSet = new Set(
+  (import.meta.env.VITE_ADMIN_EMAILS || '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean),
+);
 
 export function Layout({ children }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -42,6 +48,7 @@ export function Layout({ children }: LayoutProps) {
   const setLogoutPending = useAuthStore((state) => state.setLogoutPending);
   const location = useLocation();
   const navigate = useNavigate();
+  const isAdminViewer = viewer ? adminEmailSet.has(viewer.email.trim().toLowerCase()) : false;
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -127,6 +134,18 @@ export function Layout({ children }: LayoutProps) {
       { to: ROUTE_PATHS.ADMIN, label: '관리자' },
     ],
     [],
+  );
+
+  const visibleNavItems = useMemo(
+    () =>
+      navItems.filter((item) => {
+        if (item.to !== ROUTE_PATHS.ADMIN) {
+          return true;
+        }
+
+        return isAdminViewer;
+      }),
+    [isAdminViewer, navItems],
   );
 
   const socialLinks = useMemo(
@@ -235,7 +254,7 @@ export function Layout({ children }: LayoutProps) {
             </Link>
 
             <nav className="hidden items-center space-x-8 md:flex">
-              {navItems.map((item) =>
+              {visibleNavItems.map((item) =>
                 item.isAnchor ? (
                   <button
                     key={item.to}
@@ -302,7 +321,7 @@ export function Layout({ children }: LayoutProps) {
               className="border-t border-border bg-background md:hidden"
             >
               <nav className="container mx-auto flex flex-col space-y-4 px-4 py-4">
-                {navItems.map((item) =>
+                {visibleNavItems.map((item) =>
                   item.isAnchor ? (
                     <button
                       key={item.to}

@@ -18,6 +18,7 @@ interface ImportMetaEnv {
   readonly VITE_SSO_ME_ENDPOINT: string;
   readonly VITE_SSO_LOGOUT_ENDPOINT: string;
   readonly VITE_SERVICE_SESSION_HINT_COOKIE_NAME: string;
+  readonly VITE_ADMIN_EMAILS: string;
 }
 
 interface ImportMeta {
