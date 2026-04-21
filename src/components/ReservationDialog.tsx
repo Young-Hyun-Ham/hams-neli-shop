@@ -20,6 +20,8 @@ import { reservationStorage } from '@/lib/reservationStorage';
 import { serviceStorage } from '@/lib/serviceStorage';
 import { cn } from '@/lib/utils';
 
+import { useAuthStore } from '@/lib/auth-store';
+
 interface ReservationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -70,6 +72,8 @@ const isPastSlotToday = (date: Date, time: string) => {
 };
 
 export function ReservationDialog({ open, onOpenChange, siteSettings }: ReservationDialogProps) {
+  const viewer: any = useAuthStore((state) => state.viewer);
+
   const [step, setStep] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -126,6 +130,14 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
       setSuccess('');
     }
   }, [open]);
+
+  useEffect(() => {
+    // console.log('Viewer data in ReservationDialog:', viewer)
+    if (viewer) {
+      setCustomerName(viewer?.nickname || '');
+      setCustomerPhone(viewer?.phone || '');
+    }
+  }, [viewer]);
 
   const reservationsByDate = useMemo(() => {
     return reservations.reduce<Record<string, Set<string>>>((accumulator, reservation) => {

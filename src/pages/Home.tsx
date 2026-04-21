@@ -127,7 +127,7 @@ const persistPrices = (items: PriceItem[]) => {
 
 export default function Home() {
   const viewer = useAuthStore((state) => state.viewer);
-  console.log("home login data ==========>", viewer)
+  // console.log("home login data ==========>", viewer)
   const [serviceItems, setServiceItems] = useState<Service[]>(readCachedServices);
   const [priceList, setPriceList] = useState<PriceItem[]>(readCachedPrices);
   const [testimonialItems, setTestimonialItems] = useState<Testimonial[]>(testimonials);
