@@ -21,6 +21,7 @@ import { serviceStorage } from '@/lib/serviceStorage';
 import { cn } from '@/lib/utils';
 
 import { useAuthStore } from '@/lib/auth-store';
+import { ServiceViewer } from '@/lib/sso';
 
 interface ReservationDialogProps {
   open: boolean;
@@ -72,7 +73,7 @@ const isPastSlotToday = (date: Date, time: string) => {
 };
 
 export function ReservationDialog({ open, onOpenChange, siteSettings }: ReservationDialogProps) {
-  const viewer: any = useAuthStore((state) => state.viewer);
+  const viewer: ServiceViewer | null = useAuthStore((state) => state.viewer);
 
   const [step, setStep] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
@@ -135,7 +136,7 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
     // console.log('Viewer data in ReservationDialog:', viewer)
     if (viewer) {
       setCustomerName(viewer?.nickname || '');
-      setCustomerPhone(viewer?.phone || '');
+      setCustomerPhone(viewer?.phoneNumber || '');
     }
   }, [viewer]);
 

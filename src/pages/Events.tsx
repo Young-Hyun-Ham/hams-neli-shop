@@ -11,6 +11,7 @@ import { DEFAULT_EVENT_ITEMS, eventStorage, isEventActive } from '@/lib/eventSto
 import { settingsStorage } from '@/lib/settingsStorage';
 
 import { useAuthStore } from '@/lib/auth-store';
+import { ServiceViewer } from '@/lib/sso';
 
 const getStatusLabel = (event: EventItem) => {
   const today = new Date();
@@ -32,7 +33,7 @@ const getStatusLabel = (event: EventItem) => {
 };
 
 export default function Events() {
-  const viewer = useAuthStore((state) => state.viewer);
+  const viewer: ServiceViewer | null = useAuthStore((state) => state.viewer);
   // console.log("event login data ==========>", viewer)
   const [events, setEvents] = useState<EventItem[]>(DEFAULT_EVENT_ITEMS);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);

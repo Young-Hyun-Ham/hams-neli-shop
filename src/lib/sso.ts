@@ -1,9 +1,15 @@
 export type ServiceViewer = {
-  id: string;
-  loginId: string;
-  email: string;
-  nickname: string;
-  provider: string;
+  id: string;                // UUID 형식
+  emailLower: string;        // 소문자 이메일
+  loginId: string;           // 로그인 아이디 (전화번호 형태)
+  loginIdLower: string;      // 소문자 로그인 아이디
+  nickname: string;          // 닉네임
+  phoneNumber: string;       // 전화번호
+  provider: 'password' | string; // 인증 제공자 (예: password, google 등)
+  providerSubject: string | null; // 외부 연동 식별자
+  termsAcceptedAt: any;   // ISO 8601 날짜 문자열
+  termsVersion: string;      // 약관 버전 (YYYY-MM-DD)
+  updatedAt: any;         // ISO 8601 업데이트 일시
 };
 
 type LogoutResponse = {

@@ -6,7 +6,7 @@ import { SiFacebook, SiInstagram, SiKakao, SiTiktok, SiX } from 'react-icons/si'
 
 import { DEFAULT_SITE_SETTINGS, ROUTE_PATHS, type SiteSettings } from '@/lib/index';
 import { settingsStorage } from '@/lib/settingsStorage';
-import { beginSSOLogin, logoutService } from '@/lib/sso';
+import { beginSSOLogin, logoutService, ServiceViewer } from '@/lib/sso';
 import { useAuthStore } from '@/lib/auth-store';
 
 interface LayoutProps {
@@ -40,7 +40,7 @@ export function Layout({ children }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('');
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
-  const viewer = useAuthStore((state) => state.viewer);
+  const viewer: ServiceViewer | null = useAuthStore((state) => state.viewer);
   const authLoading = useAuthStore((state) => state.authLoading);
   const logoutPending = useAuthStore((state) => state.logoutPending);
   const hydrateSession = useAuthStore((state) => state.hydrateSession);
@@ -48,7 +48,7 @@ export function Layout({ children }: LayoutProps) {
   const setLogoutPending = useAuthStore((state) => state.setLogoutPending);
   const location = useLocation();
   const navigate = useNavigate();
-  const isAdminViewer = viewer ? adminEmailSet.has(viewer.email.trim().toLowerCase()) : false;
+  const isAdminViewer = viewer ? adminEmailSet.has(viewer.emailLower) : false;
 
   useEffect(() => {
     setMobileMenuOpen(false);
