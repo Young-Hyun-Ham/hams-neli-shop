@@ -101,7 +101,7 @@ export async function logoutService() {
     throw new Error('Failed to logout from service.');
   }
 
-  const payload = (await response.json().catch((e: any) => null)) as LogoutResponse | null;
+  const payload = (await response.json()) as LogoutResponse | null;
   const redirectUrl = payload?.redirectUrl || authOrigin;
 
   if (typeof window !== 'undefined') {
