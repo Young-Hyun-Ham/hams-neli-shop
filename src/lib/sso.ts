@@ -1,5 +1,6 @@
 export type ServiceViewer = {
   id: string;                // UUID 형식
+  email: string;             // 이메일
   emailLower: string;        // 소문자 이메일
   loginId: string;           // 로그인 아이디 (전화번호 형태)
   loginIdLower: string;      // 소문자 로그인 아이디

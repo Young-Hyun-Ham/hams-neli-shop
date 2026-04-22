@@ -32,7 +32,7 @@ const hasVisibleSocialLink = (value: string) => value.trim().length > 0;
 const adminEmailSet = new Set(
   (import.meta.env.VITE_ADMIN_EMAILS || '')
     .split(',')
-    .map((email) => email.trim().toLowerCase())
+    .map((email) => email.trim())
     .filter(Boolean),
 );
 
@@ -48,7 +48,7 @@ export function Layout({ children }: LayoutProps) {
   const setLogoutPending = useAuthStore((state) => state.setLogoutPending);
   const location = useLocation();
   const navigate = useNavigate();
-  const isAdminViewer = viewer ? adminEmailSet.has(viewer.emailLower) : false;
+  const isAdminViewer = viewer ? adminEmailSet.has(viewer.email) : false;
 
   useEffect(() => {
     setMobileMenuOpen(false);
