@@ -3,6 +3,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   orderBy,
   query,
@@ -37,6 +38,21 @@ export const videoStorage = {
       id: snapshotDoc.id,
       visible: (snapshotDoc.data() as Omit<Video, 'id'>).visible ?? true,
     }));
+  },
+
+  async getVideo(id: string): Promise<Video | null> {
+    assertFirebaseConfigured();
+
+    const videoDoc = await getDoc(doc(db, VIDEOS_COLLECTION, id));
+    if (!videoDoc.exists()) {
+      return null;
+    }
+
+    return {
+      ...(videoDoc.data() as Omit<Video, 'id'>),
+      id: videoDoc.id,
+      visible: (videoDoc.data() as Omit<Video, 'id'>).visible ?? true,
+    };
   },
 
   async addVideo(video: CreateVideoInput): Promise<Video> {

@@ -971,6 +971,15 @@ export default function Admin() {
   };
 
   const handleDeleteVideo = async (id: string) => {
+    const confirmDelete = await videoStorage.getVideo(id).then((video) => {
+      return window.confirm(`정말 ${video?.title || '이'} 동영상을 삭제하시겠습니까?`);
+    }).catch((error) => {
+      console.error('Failed to get video for deletion:', error);
+      setError('삭제할 동영상을 불러오지 못했습니다.');
+      return false;
+    });
+    if (!confirmDelete) return ;
+
     try {
       await videoStorage.deleteVideo(id);
       setSuccess('동영상을 삭제했습니다.');
@@ -1020,7 +1029,7 @@ export default function Admin() {
         title: trimmedTitle,
         description: editVideo.description.trim(),
         url: trimmedUrl,
-        thumbnail: undefined,
+        // thumbnail: undefined, // 추후 썸네일 직접 등록 기능이 추가되면 수정 필요
         visible: editVideo.visible,
       });
       setSuccess('동영상을 수정했습니다.');
@@ -1100,6 +1109,9 @@ export default function Admin() {
   };
 
   const handleDeleteImage = async (image: GalleryImage) => {
+    const confirmDelete = await window.confirm(`정말 ${image?.title || '이'} 이미지를 삭제하시겠습니까?`);
+    if (!confirmDelete) return ;
+
     try {
       await imageStorage.deleteImage(image);
       setImageSuccess('이미지를 삭제했습니다.');
@@ -2158,8 +2170,6 @@ export default function Admin() {
                           <Button type="button" variant={!videoVisible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setVideoVisible(false)}>X</Button>
                         </div>
                       </div>
-                      {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-                      {success && <Alert className="border-green-200 bg-green-50 text-green-800"><AlertDescription>{success}</AlertDescription></Alert>}
                       <Button type="submit" disabled={uploading} className="w-full">{uploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />등록 중...</> : <><Upload className="mr-2 h-4 w-4" />등록</>}</Button>
                     </form>
                   </CardContent>
@@ -2167,10 +2177,36 @@ export default function Admin() {
               </motion.div>
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
+                {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+                {success && <Alert className="border-green-200 bg-green-50 text-green-800"><AlertDescription>{success}</AlertDescription></Alert>}
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
                 <Card className="shadow-lg">
                   <CardHeader><CardTitle className="text-2xl">등록된 동영상</CardTitle><CardDescription>현재 등록된 동영상 목록을 확인하고 삭제할 수 있습니다.</CardDescription></CardHeader>
                   <CardContent>
-                    {loadingVideos ? <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : videos.length === 0 ? <div className="py-12 text-center text-muted-foreground">등록된 동영상이 없습니다.</div> : <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{videos.map((video) => <div key={video.id} className={rowVisibilityClassName(video.visible)}><VideoCard video={video} onDelete={handleDeleteVideo} isAdmin /><div className="mt-3 flex gap-2"><Button type="button" variant="outline" size="sm" className="gap-1 px-2" onClick={() => openEditVideoDialog(video)}><Pencil className="mr-1 h-4 w-4" />수정</Button></div></div>)}</div>}
+                    {loadingVideos ? 
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      </div>
+                    : videos.length === 0 ? 
+                      <div className="py-12 text-center text-muted-foreground">
+                        등록된 동영상이 없습니다.
+                      </div> 
+                      : 
+                      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        {videos.map((video) => 
+                          <div key={video.id} className={rowVisibilityClassName(video.visible)}>
+                            <VideoCard video={video} onDelete={handleDeleteVideo} isAdmin />
+                            <div className="mt-3 flex gap-2">
+                              <Button type="button" variant="outline" size="sm" className="gap-1 px-2" onClick={() => openEditVideoDialog(video)}>
+                                <Pencil className="mr-1 h-4 w-4" />수정
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    }
                   </CardContent>
                 </Card>
               </motion.div>
@@ -2283,14 +2319,17 @@ export default function Admin() {
                           <Button type="button" variant={!imageVisible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setImageVisible(false)}>X</Button>
                         </div>
                       </div>
-                      {imageError && <Alert variant="destructive"><AlertDescription>{imageError}</AlertDescription></Alert>}
-                      {imageSuccess && <Alert className="border-green-200 bg-green-50 text-green-800"><AlertDescription>{imageSuccess}</AlertDescription></Alert>}
                       <Button type="submit" disabled={imageUploading} className="w-full">
                         {imageUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />등록 중...</> : <><Upload className="mr-2 h-4 w-4" />이미지 등록</>}
                       </Button>
                     </form>
                   </CardContent>
                 </Card>
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
+                {imageError && <Alert variant="destructive"><AlertDescription>{imageError}</AlertDescription></Alert>}
+                {imageSuccess && <Alert className="border-green-200 bg-green-50 text-green-800"><AlertDescription>{imageSuccess}</AlertDescription></Alert>}
               </motion.div>
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
@@ -2401,14 +2440,17 @@ export default function Admin() {
                           <Button type="button" variant={!categoryVisible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setCategoryVisible(false)}>X</Button>
                         </div>
                       </div>
-                      {categoryError && <Alert variant="destructive"><AlertDescription>{categoryError}</AlertDescription></Alert>}
-                      {categorySuccess && <Alert className="border-green-200 bg-green-50 text-green-800"><AlertDescription>{categorySuccess}</AlertDescription></Alert>}
                       <Button type="submit" disabled={categorySaving} className="w-full">
                         {categorySaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />등록 중...</> : <><Upload className="mr-2 h-4 w-4" />카테고리 등록</>}
                       </Button>
                     </form>
                   </CardContent>
                 </Card>
+              </motion.div>
+              
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
+                {categoryError && <Alert variant="destructive"><AlertDescription>{categoryError}</AlertDescription></Alert>}
+                {categorySuccess && <Alert className="border-green-200 bg-green-50 text-green-800"><AlertDescription>{categorySuccess}</AlertDescription></Alert>}
               </motion.div>
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
@@ -2570,14 +2612,17 @@ export default function Admin() {
                           <Button type="button" variant={!eventVisible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setEventVisible(false)}>X</Button>
                         </div>
                       </div>
-                      {eventError && <Alert variant="destructive"><AlertDescription>{eventError}</AlertDescription></Alert>}
-                      {eventSuccess && <Alert className="border-green-200 bg-green-50 text-green-800"><AlertDescription>{eventSuccess}</AlertDescription></Alert>}
                       <Button type="submit" disabled={eventUploading} className="w-full">
                         {eventUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />등록 중...</> : <><Upload className="mr-2 h-4 w-4" />이벤트 등록</>}
                       </Button>
                     </form>
                   </CardContent>
                 </Card>
+              </motion.div>
+              
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
+                {eventError && <Alert variant="destructive"><AlertDescription>{eventError}</AlertDescription></Alert>}
+                {eventSuccess && <Alert className="border-green-200 bg-green-50 text-green-800"><AlertDescription>{eventSuccess}</AlertDescription></Alert>}
               </motion.div>
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
@@ -2745,14 +2790,17 @@ export default function Admin() {
                           <Button type="button" variant={!serviceVisible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setServiceVisible(false)}>X</Button>
                         </div>
                       </div>
-                      {serviceError && <Alert variant="destructive"><AlertDescription>{serviceError}</AlertDescription></Alert>}
-                      {serviceSuccess && <Alert className="border-green-200 bg-green-50 text-green-800"><AlertDescription>{serviceSuccess}</AlertDescription></Alert>}
                       <Button type="submit" disabled={serviceUploading} className="w-full">
                         {serviceUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />등록 중...</> : <><Upload className="mr-2 h-4 w-4" />서비스 등록</>}
                       </Button>
                     </form>
                   </CardContent>
                 </Card>
+              </motion.div>
+              
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
+                {serviceError && <Alert variant="destructive"><AlertDescription>{serviceError}</AlertDescription></Alert>}
+                {serviceSuccess && <Alert className="border-green-200 bg-green-50 text-green-800"><AlertDescription>{serviceSuccess}</AlertDescription></Alert>}
               </motion.div>
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
@@ -2879,12 +2927,15 @@ export default function Admin() {
                           <Button type="button" variant={!priceVisible ? 'default' : 'ghost'} size="sm" className="rounded-lg" onClick={() => setPriceVisible(false)}>X</Button>
                         </div>
                       </div>
-                      {priceError && <Alert variant="destructive"><AlertDescription>{priceError}</AlertDescription></Alert>}
-                      {priceSuccess && <Alert className="border-green-200 bg-green-50 text-green-800"><AlertDescription>{priceSuccess}</AlertDescription></Alert>}
                       <Button type="submit" disabled={priceUploading} className="w-full">{priceUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />등록 중...</> : <><Upload className="mr-2 h-4 w-4" />가격표 등록</>}</Button>
                     </form>
                   </CardContent>
                 </Card>
+              </motion.div>
+              
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
+                {priceError && <Alert variant="destructive"><AlertDescription>{priceError}</AlertDescription></Alert>}
+                {priceSuccess && <Alert className="border-green-200 bg-green-50 text-green-800"><AlertDescription>{priceSuccess}</AlertDescription></Alert>}
               </motion.div>
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
