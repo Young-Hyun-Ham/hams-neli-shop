@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
-import { TestimonialCard } from '@/components/Cards';
-import { Layout } from '@/components/Layout';
-import { TestimonialDetailDialog } from '@/components/TestimonialDetailDialog';
+import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
+import { TestimonialCard } from "@/components/Cards";
+import { Layout } from "@/components/Layout";
+import { TestimonialDetailDialog } from "@/components/TestimonialDetailDialog";
 import {
   Pagination,
   PaginationContent,
@@ -11,16 +11,17 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from '@/components/ui/pagination';
-import { testimonials as fallbackTestimonials } from '@/data/index';
-import type { Testimonial } from '@/lib/index';
-import { testimonialStorage } from '@/lib/testimonialStorage';
+} from "@/components/ui/pagination";
+import { testimonials as fallbackTestimonials } from "@/data/index";
+import type { Testimonial } from "@/lib/index";
+import { testimonialStorage } from "@/lib/testimonialStorage";
 
 const PAGE_SIZE = 12;
 
 export default function Testimonials() {
   const [items, setItems] = useState<Testimonial[]>(fallbackTestimonials);
-  const [selectedTestimonial, setSelectedTestimonial] = useState<Testimonial | null>(null);
+  const [selectedTestimonial, setSelectedTestimonial] =
+    useState<Testimonial | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -42,13 +43,13 @@ export default function Testimonials() {
           setLoading(false);
         },
         (error) => {
-          console.error('Failed to subscribe testimonials:', error);
+          console.error("Failed to subscribe testimonials:", error);
           setItems(fallbackTestimonials);
           setLoading(false);
         },
       );
     } catch (error) {
-      console.error('Failed to initialize testimonial subscription:', error);
+      console.error("Failed to initialize testimonial subscription:", error);
       setItems(fallbackTestimonials);
       setLoading(false);
     }
@@ -63,7 +64,7 @@ export default function Testimonials() {
   }, [currentPage, totalPages]);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [currentPage]);
 
   return (
@@ -76,7 +77,9 @@ export default function Testimonials() {
             transition={{ duration: 0.5 }}
             className="text-center"
           >
-            <h1 className="text-4xl font-bold text-foreground md:text-5xl">고객후기</h1>
+            <h1 className="text-4xl font-bold text-foreground md:text-5xl">
+              고객후기
+            </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
               등록된 고객후기 확인할 수 있습니다.
             </p>
@@ -108,7 +111,11 @@ export default function Testimonials() {
                           event.preventDefault();
                           setCurrentPage((prev) => Math.max(1, prev - 1));
                         }}
-                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        className={
+                          currentPage === 1
+                            ? "pointer-events-none opacity-50"
+                            : "cursor-pointer"
+                        }
                       />
                     </PaginationItem>
 
@@ -137,10 +144,14 @@ export default function Testimonials() {
                         href="#"
                         onClick={(event) => {
                           event.preventDefault();
-                          setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+                          setCurrentPage((prev) =>
+                            Math.min(totalPages, prev + 1),
+                          );
                         }}
                         className={
-                          currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'
+                          currentPage === totalPages
+                            ? "pointer-events-none opacity-50"
+                            : "cursor-pointer"
                         }
                       />
                     </PaginationItem>

@@ -1,40 +1,69 @@
-﻿import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
-import { db, isFirebaseConfigured } from './firebase';
-import { DEFAULT_SITE_SETTINGS, type SiteSettings, type TimeRange, type Weekday } from './index';
+﻿import { doc, getDoc, onSnapshot, setDoc } from "firebase/firestore";
+import { db, isFirebaseConfigured } from "./firebase";
+import {
+  DEFAULT_SITE_SETTINGS,
+  type SiteSettings,
+  type TimeRange,
+  type Weekday,
+} from "./index";
 
-const SETTINGS_COLLECTION = 'settings';
-const SITE_SETTINGS_DOC = 'site';
-const ADMIN_SETTINGS_DOC = 'admin';
-const VALID_WEEKDAYS: Weekday[] = ['월', '화', '수', '목', '금', '토', '일'];
-const DEFAULT_ADMIN_PASSWORD = 'admin1234';
+const SETTINGS_COLLECTION = "settings";
+const SITE_SETTINGS_DOC = "site";
+const ADMIN_SETTINGS_DOC = "admin";
+const VALID_WEEKDAYS: Weekday[] = ["월", "화", "수", "목", "금", "토", "일"];
+const DEFAULT_ADMIN_PASSWORD = "admin1234";
 
 const getSettingsDocRef = () => doc(db, SETTINGS_COLLECTION, SITE_SETTINGS_DOC);
 const getAdminDocRef = () => doc(db, SETTINGS_COLLECTION, ADMIN_SETTINGS_DOC);
 
-const normalizeTimeRange = (value: Partial<TimeRange> | undefined, fallback: TimeRange): TimeRange => ({
+const normalizeTimeRange = (
+  value: Partial<TimeRange> | undefined,
+  fallback: TimeRange,
+): TimeRange => ({
   startHour: value?.startHour || fallback.startHour,
   startMinute: value?.startMinute || fallback.startMinute,
   endHour: value?.endHour || fallback.endHour,
   endMinute: value?.endMinute || fallback.endMinute,
 });
 
-const normalizeOptionalString = (value: string | null | undefined, fallback: string) =>
-  value ?? fallback;
+const normalizeOptionalString = (
+  value: string | null | undefined,
+  fallback: string,
+) => value ?? fallback;
 
-const normalizeSettings = (value?: Partial<SiteSettings> | null): SiteSettings => ({
+const normalizeSettings = (
+  value?: Partial<SiteSettings> | null,
+): SiteSettings => ({
   addressLine1: value?.addressLine1 || DEFAULT_SITE_SETTINGS.addressLine1,
   addressLine2: value?.addressLine2 || DEFAULT_SITE_SETTINGS.addressLine2,
-  mapQuery: value?.mapQuery || value?.addressLine1 || DEFAULT_SITE_SETTINGS.mapQuery,
+  mapQuery:
+    value?.mapQuery || value?.addressLine1 || DEFAULT_SITE_SETTINGS.mapQuery,
   phone: value?.phone || DEFAULT_SITE_SETTINGS.phone,
   email: value?.email || DEFAULT_SITE_SETTINGS.email,
-  weekdayHours: normalizeTimeRange(value?.weekdayHours, DEFAULT_SITE_SETTINGS.weekdayHours),
-  weekendHours: normalizeTimeRange(value?.weekendHours, DEFAULT_SITE_SETTINGS.weekendHours),
+  weekdayHours: normalizeTimeRange(
+    value?.weekdayHours,
+    DEFAULT_SITE_SETTINGS.weekdayHours,
+  ),
+  weekendHours: normalizeTimeRange(
+    value?.weekendHours,
+    DEFAULT_SITE_SETTINGS.weekendHours,
+  ),
   closedDays:
-    value?.closedDays?.filter((item): item is Weekday => VALID_WEEKDAYS.includes(item as Weekday)) ||
-    DEFAULT_SITE_SETTINGS.closedDays,
-  instagramUrl: normalizeOptionalString(value?.instagramUrl, DEFAULT_SITE_SETTINGS.instagramUrl),
-  tiktokUrl: normalizeOptionalString(value?.tiktokUrl, DEFAULT_SITE_SETTINGS.tiktokUrl),
-  facebookUrl: normalizeOptionalString(value?.facebookUrl, DEFAULT_SITE_SETTINGS.facebookUrl),
+    value?.closedDays?.filter((item): item is Weekday =>
+      VALID_WEEKDAYS.includes(item as Weekday),
+    ) || DEFAULT_SITE_SETTINGS.closedDays,
+  instagramUrl: normalizeOptionalString(
+    value?.instagramUrl,
+    DEFAULT_SITE_SETTINGS.instagramUrl,
+  ),
+  tiktokUrl: normalizeOptionalString(
+    value?.tiktokUrl,
+    DEFAULT_SITE_SETTINGS.tiktokUrl,
+  ),
+  facebookUrl: normalizeOptionalString(
+    value?.facebookUrl,
+    DEFAULT_SITE_SETTINGS.facebookUrl,
+  ),
   kakaoOpenChatUrl: normalizeOptionalString(
     value?.kakaoOpenChatUrl,
     DEFAULT_SITE_SETTINGS.kakaoOpenChatUrl,
@@ -44,10 +73,10 @@ const normalizeSettings = (value?: Partial<SiteSettings> | null): SiteSettings =
 
 const hashPassword = async (value: string) => {
   const data = new TextEncoder().encode(value);
-  const digest = await crypto.subtle.digest('SHA-256', data);
+  const digest = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 };
 
 export const settingsStorage = {
@@ -94,7 +123,9 @@ export const settingsStorage = {
       return;
     }
 
-    await setDoc(getSettingsDocRef(), normalizeSettings(settings), { merge: true });
+    await setDoc(getSettingsDocRef(), normalizeSettings(settings), {
+      merge: true,
+    });
   },
 
   async getAdminPasswordHash(): Promise<string> {

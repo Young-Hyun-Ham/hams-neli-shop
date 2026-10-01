@@ -1,15 +1,15 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { HashRouter, Route, Routes } from 'react-router-dom';
-import { Toaster } from '@/components/ui/toaster';
-import { Toaster as Sonner } from '@/components/ui/sonner';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { ROUTE_PATHS } from '@/lib/index';
-import Home from '@/pages/Home';
-import Gallery from '@/pages/GalleryPage';
-import Admin from '@/pages/Admin';
-import Events from '@/pages/Events';
-import Review from '@/pages/Review';
-import Testimonials from '@/pages/Testimonials';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { HashRouter, Route, Routes } from "react-router-dom";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ROUTE_PATHS } from "@/lib/index";
+import Home from "@/pages/Home";
+import Gallery from "@/pages/GalleryPage";
+import Admin from "@/pages/Admin";
+import Events from "@/pages/Events";
+import Review from "@/pages/Review";
+import Testimonials from "@/pages/Testimonials";
 
 const queryClient = new QueryClient();
 

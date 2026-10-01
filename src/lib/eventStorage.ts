@@ -8,30 +8,49 @@ import {
   orderBy,
   query,
   updateDoc,
-} from 'firebase/firestore';
-import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { IMAGES } from '@/assets/images';
-import type { EventItem } from './index';
-import { db, isFirebaseConfigured, storage } from './firebase';
+} from "firebase/firestore";
+import {
+  deleteObject,
+  getDownloadURL,
+  list,
+  ref,
+  uploadBytes,
+} from "firebase/storage";
+import { IMAGES } from "@/assets/images";
+import type { EventItem } from "./index";
+import { db, isFirebaseConfigured, storage } from "./firebase";
 
-const EVENTS_COLLECTION = 'events';
+const EVENTS_COLLECTION = "events";
 
-type CreateEventInput = Omit<EventItem, 'id' | 'createdAt'> & {
+type CreateEventInput = Omit<EventItem, "id" | "createdAt"> & {
   createdAt?: string;
 };
-type UpdateEventInput = Omit<EventItem, 'id' | 'createdAt'> & {
+type UpdateEventInput = Omit<EventItem, "id" | "createdAt"> & {
   previousImage?: string;
+};
+
+export type EventStorageImage = {
+  name: string;
+  fullPath: string;
+  url: string;
+};
+
+export type EventStorageImagePage = {
+  items: EventStorageImage[];
+  nextPageToken?: string;
 };
 
 const assertFirebaseConfigured = () => {
   if (!isFirebaseConfigured) {
-    throw new Error('Firebase is not configured. Check your VITE_FIREBASE_* environment variables.');
+    throw new Error(
+      "Firebase is not configured. Check your VITE_FIREBASE_* environment variables.",
+    );
   }
 };
 
 const getFileExtension = (file: File) => {
-  const parts = file.name.split('.');
-  return (parts[parts.length - 1] || 'jpg').toLowerCase();
+  const parts = file.name.split(".");
+  return (parts[parts.length - 1] || "jpg").toLowerCase();
 };
 
 const deleteStoredImage = async (url?: string) => {
@@ -42,7 +61,7 @@ const deleteStoredImage = async (url?: string) => {
   try {
     await deleteObject(ref(storage, url));
   } catch (error) {
-    console.error('Failed to delete event image file:', error);
+    console.error("Failed to delete event image file:", error);
   }
 };
 
@@ -55,7 +74,7 @@ const sortEvents = (items: EventItem[]) =>
     return b.startDate.localeCompare(a.startDate);
   });
 
-const withDefaults = (item: Omit<EventItem, 'id'>, id: string): EventItem => ({
+const withDefaults = (item: Omit<EventItem, "id">, id: string): EventItem => ({
   ...item,
   id,
   image: item.image || IMAGES.GALLERY_10,
@@ -76,14 +95,19 @@ export const DEFAULT_EVENT_ITEMS: EventItem[] = [
 ];
 
 export const isEventActive = (event: EventItem, today = new Date()) => {
-  const date = `${today.getFullYear()}-${`${today.getMonth() + 1}`.padStart(2, '0')}-${`${today.getDate()}`.padStart(2, '0')}`;
-  return event.visible !== false && event.startDate <= date && event.endDate >= date;
+  const date = `${today.getFullYear()}-${`${today.getMonth() + 1}`.padStart(2, "0")}-${`${today.getDate()}`.padStart(2, "0")}`;
+  return (
+    event.visible !== false && event.startDate <= date && event.endDate >= date
+  );
 };
 
 export const eventStorage = {
   createEventsQuery() {
     assertFirebaseConfigured();
-    return query(collection(db, EVENTS_COLLECTION), orderBy('startDate', 'desc'));
+    return query(
+      collection(db, EVENTS_COLLECTION),
+      orderBy("startDate", "desc"),
+    );
   },
 
   async getEvents(): Promise<EventItem[]> {
@@ -92,12 +116,18 @@ export const eventStorage = {
 
     return sortEvents(
       snapshot.docs.map((snapshotDoc) =>
-        withDefaults(snapshotDoc.data() as Omit<EventItem, 'id'>, snapshotDoc.id),
+        withDefaults(
+          snapshotDoc.data() as Omit<EventItem, "id">,
+          snapshotDoc.id,
+        ),
       ),
     );
   },
 
-  subscribeEvents(onData: (items: EventItem[]) => void, onError?: (error: Error) => void) {
+  subscribeEvents(
+    onData: (items: EventItem[]) => void,
+    onError?: (error: Error) => void,
+  ) {
     const eventsQuery = this.createEventsQuery();
 
     return onSnapshot(
@@ -105,7 +135,10 @@ export const eventStorage = {
       (snapshot: any) => {
         const items = sortEvents(
           snapshot.docs.map((snapshotDoc: any) =>
-            withDefaults(snapshotDoc.data() as Omit<EventItem, 'id'>, snapshotDoc.id),
+            withDefaults(
+              snapshotDoc.data() as Omit<EventItem, "id">,
+              snapshotDoc.id,
+            ),
           ),
         );
 
@@ -129,6 +162,27 @@ export const eventStorage = {
     });
 
     return getDownloadURL(storageRef);
+  },
+
+  async getEventImages(pageToken?: string): Promise<EventStorageImagePage> {
+    assertFirebaseConfigured();
+
+    const result = await list(ref(storage, "events"), {
+      maxResults: 10,
+      pageToken,
+    });
+    const items = await Promise.all(
+      result.items.map(async (itemRef) => ({
+        name: itemRef.name,
+        fullPath: itemRef.fullPath,
+        url: await getDownloadURL(itemRef),
+      })),
+    );
+
+    return {
+      items,
+      nextPageToken: result.nextPageToken,
+    };
   },
 
   async addEvent(item: CreateEventInput): Promise<EventItem> {

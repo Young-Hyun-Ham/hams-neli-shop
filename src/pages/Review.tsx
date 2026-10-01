@@ -1,19 +1,30 @@
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { ImagePlus, Loader2, Star, X } from 'lucide-react';
-import { Layout } from '@/components/Layout';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { testimonialStorage } from '@/lib/testimonialStorage';
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { ImagePlus, Loader2, Star, X } from "lucide-react";
+import { Layout } from "@/components/Layout";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { testimonialStorage } from "@/lib/testimonialStorage";
 
 const MAX_IMAGE_COUNT = 5;
-const LOCAL_STORAGE_KEY = 'pending-testimonial-images';
-const EDIT_DRAFT_STORAGE_KEY = 'testimonial-edit-draft';
+const LOCAL_STORAGE_KEY = "pending-testimonial-images";
+const EDIT_DRAFT_STORAGE_KEY = "testimonial-edit-draft";
 
 type PendingImage = {
   id: string;
@@ -35,15 +46,15 @@ type EditDraft = {
 const readFileAsDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onload = () => resolve(String(reader.result || ""));
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
   });
 
 const dataUrlToFile = (item: PendingImage) => {
-  const [header, base64] = item.dataUrl.split(',');
+  const [header, base64] = item.dataUrl.split(",");
   const mimeMatch = header.match(/data:(.*?);base64/);
-  const mime = mimeMatch?.[1] || item.type || 'image/jpeg';
+  const mime = mimeMatch?.[1] || item.type || "image/jpeg";
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
 
@@ -60,16 +71,16 @@ const clearDraftStorage = () => {
 };
 
 export default function Review() {
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
   const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState('');
+  const [comment, setComment] = useState("");
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [selectedImage, setSelectedImage] = useState<PendingImage | null>(null);
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     const rawDraft = sessionStorage.getItem(EDIT_DRAFT_STORAGE_KEY);
@@ -78,30 +89,32 @@ export default function Review() {
       try {
         const parsedDraft = JSON.parse(rawDraft) as EditDraft;
         setEditDraft(parsedDraft);
-        setName(parsedDraft.name || '');
-        setPassword(parsedDraft.password || '');
+        setName(parsedDraft.name || "");
+        setPassword(parsedDraft.password || "");
         setRating(parsedDraft.rating || 5);
-        setComment(parsedDraft.comment || '');
+        setComment(parsedDraft.comment || "");
         setPendingImages(
-          (parsedDraft.images ?? []).slice(0, MAX_IMAGE_COUNT).map((imageUrl, index) => ({
-            id: `remote-${index}-${imageUrl}`,
-            name: `existing-image-${index + 1}`,
-            type: 'image/*',
-            dataUrl: imageUrl,
-            remoteUrl: imageUrl,
-          })),
+          (parsedDraft.images ?? [])
+            .slice(0, MAX_IMAGE_COUNT)
+            .map((imageUrl, index) => ({
+              id: `remote-${index}-${imageUrl}`,
+              name: `existing-image-${index + 1}`,
+              type: "image/*",
+              dataUrl: imageUrl,
+              remoteUrl: imageUrl,
+            })),
         );
         return;
       } catch (draftError) {
-        console.error('Failed to parse testimonial edit draft:', draftError);
+        console.error("Failed to parse testimonial edit draft:", draftError);
         clearDraftStorage();
       }
     }
 
-    setName('');
-    setPassword('');
+    setName("");
+    setPassword("");
     setRating(5);
-    setComment('');
+    setComment("");
     setPendingImages([]);
 
     const rawImages = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -115,7 +128,10 @@ export default function Review() {
         setPendingImages(parsedImages.slice(0, MAX_IMAGE_COUNT));
       }
     } catch (storageError) {
-      console.error('Failed to parse pending testimonial images:', storageError);
+      console.error(
+        "Failed to parse pending testimonial images:",
+        storageError,
+      );
       localStorage.removeItem(LOCAL_STORAGE_KEY);
     }
   }, []);
@@ -131,7 +147,9 @@ export default function Review() {
     );
   }, [editDraft, pendingImages]);
 
-  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const selectedFiles = Array.from(event.target.files ?? []);
     if (selectedFiles.length === 0) {
       return;
@@ -140,7 +158,7 @@ export default function Review() {
     const remainingSlots = MAX_IMAGE_COUNT - pendingImages.length;
     if (remainingSlots <= 0) {
       setError(`사진은 최대 ${MAX_IMAGE_COUNT}장까지 등록할 수 있습니다.`);
-      event.target.value = '';
+      event.target.value = "";
       return;
     }
 
@@ -156,18 +174,20 @@ export default function Review() {
         })),
       );
 
-      setPendingImages((prev) => [...prev, ...appendedImages].slice(0, MAX_IMAGE_COUNT));
+      setPendingImages((prev) =>
+        [...prev, ...appendedImages].slice(0, MAX_IMAGE_COUNT),
+      );
 
       if (selectedFiles.length > remainingSlots) {
         setError(`사진은 최대 ${MAX_IMAGE_COUNT}장까지 등록할 수 있습니다.`);
       } else {
-        setError('');
+        setError("");
       }
     } catch (readError) {
-      console.error('Failed to read selected images:', readError);
-      setError('이미지 미리보기를 준비하는 중 오류가 발생했습니다.');
+      console.error("Failed to read selected images:", readError);
+      setError("이미지 미리보기를 준비하는 중 오류가 발생했습니다.");
     } finally {
-      event.target.value = '';
+      event.target.value = "";
     }
   };
 
@@ -179,14 +199,14 @@ export default function Review() {
   };
 
   const resetForm = () => {
-    setName('');
-    setPassword('');
+    setName("");
+    setPassword("");
     setRating(5);
-    setComment('');
+    setComment("");
     setPendingImages([]);
     setSelectedImage(null);
     setEditDraft(null);
-    setError('');
+    setError("");
     clearDraftStorage();
   };
 
@@ -194,24 +214,31 @@ export default function Review() {
     event.preventDefault();
 
     if (!name.trim() || !comment.trim() || !password.trim()) {
-      setError('이름, 비밀번호, 후기를 모두 입력해 주세요.');
+      setError("이름, 비밀번호, 후기를 모두 입력해 주세요.");
       return;
     }
 
     setSubmitting(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
       if (editDraft) {
         const existingImages = pendingImages
           .filter((item) => item.remoteUrl)
           .map((item) => item.remoteUrl as string);
-        const newFiles = pendingImages.filter((item) => !item.remoteUrl).map(dataUrlToFile);
-        const uploadedImages = newFiles.length > 0 ? await testimonialStorage.uploadImages(newFiles) : [];
+        const newFiles = pendingImages
+          .filter((item) => !item.remoteUrl)
+          .map(dataUrlToFile);
+        const uploadedImages =
+          newFiles.length > 0
+            ? await testimonialStorage.uploadImages(newFiles)
+            : [];
         const finalImages = [...existingImages, ...uploadedImages];
-        const removedImages = (editDraft.images ?? []).filter((url) => !existingImages.includes(url));
-        const coverImage = finalImages[0] || '';
+        const removedImages = (editDraft.images ?? []).filter(
+          (url) => !existingImages.includes(url),
+        );
+        const coverImage = finalImages[0] || "";
 
         await testimonialStorage.updateTestimonial(editDraft.id, {
           name: name.trim(),
@@ -223,14 +250,15 @@ export default function Review() {
           removedImages,
         });
 
-        setSuccess('후기를 수정했습니다.');
+        setSuccess("후기를 수정했습니다.");
         resetForm();
         return;
       }
 
       const files = pendingImages.map(dataUrlToFile);
-      const images = files.length > 0 ? await testimonialStorage.uploadImages(files) : [];
-      const coverImage = images[0] || '';
+      const images =
+        files.length > 0 ? await testimonialStorage.uploadImages(files) : [];
+      const coverImage = images[0] || "";
 
       await testimonialStorage.addTestimonial({
         name: name.trim(),
@@ -242,11 +270,15 @@ export default function Review() {
         avatar: coverImage,
       });
 
-      setSuccess('후기가 등록되었습니다.');
+      setSuccess("후기가 등록되었습니다.");
       resetForm();
     } catch (submitError) {
-      console.error('Failed to submit testimonial:', submitError);
-      setError(editDraft ? '후기 수정 중 오류가 발생했습니다.' : '후기 등록 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+      console.error("Failed to submit testimonial:", submitError);
+      setError(
+        editDraft
+          ? "후기 수정 중 오류가 발생했습니다."
+          : "후기 등록 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -263,24 +295,31 @@ export default function Review() {
             className="mb-10 text-center"
           >
             <h1 className="text-4xl font-bold text-foreground md:text-5xl">
-              {editDraft ? '후기 수정' : '후기 작성'}
+              {editDraft ? "후기 수정" : "후기 작성"}
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
               {editDraft
-                ? '기존 후기와 이미지 구성을 수정한 뒤 저장할 수 있습니다.'
-                : '후기와 사진을 남겨주시면 고객후기 페이지에 바로 반영됩니다.'}
+                ? "기존 후기와 이미지 구성을 수정한 뒤 저장할 수 있습니다."
+                : "후기와 사진을 남겨주시면 고객후기 페이지에 바로 반영됩니다."}
             </p>
           </motion.div>
 
           <Card className="overflow-hidden border-border/50 shadow-xl">
             <CardHeader className="bg-gradient-to-r from-primary/10 via-background to-secondary/10">
-              <CardTitle className="text-3xl">{editDraft ? '고객후기 수정' : '고객후기 작성'}</CardTitle>
+              <CardTitle className="text-3xl">
+                {editDraft ? "고객후기 수정" : "고객후기 작성"}
+              </CardTitle>
               <CardDescription>
-                사진은 최대 5장까지 누적 등록할 수 있고, 실제 업로드는 저장 시점에만 진행됩니다.
+                사진은 최대 5장까지 누적 등록할 수 있고, 실제 업로드는 저장
+                시점에만 진행됩니다.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6 sm:p-8">
-              <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
+              <form
+                onSubmit={handleSubmit}
+                className="space-y-6"
+                autoComplete="off"
+              >
                 <div className="space-y-2">
                   <Label htmlFor="reviewer-name">이름</Label>
                   <Input
@@ -325,13 +364,17 @@ export default function Review() {
                         >
                           <Star
                             className={`h-7 w-7 ${
-                              value <= rating ? 'fill-primary text-primary' : 'text-muted-foreground'
+                              value <= rating
+                                ? "fill-primary text-primary"
+                                : "text-muted-foreground"
                             }`}
                           />
                         </button>
                       );
                     })}
-                    <span className="ml-2 text-sm text-muted-foreground">{rating} / 5</span>
+                    <span className="ml-2 text-sm text-muted-foreground">
+                      {rating} / 5
+                    </span>
                   </div>
                 </div>
 
@@ -351,8 +394,8 @@ export default function Review() {
                   <Label htmlFor="review-image">사진 등록</Label>
                   <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-4">
                     <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
-                      <ImagePlus className="h-4 w-4" />
-                      첫 번째 사진이 고객후기 목록 썸네일로 사용됩니다.
+                      <ImagePlus className="h-4 w-4" />첫 번째 사진이 고객후기
+                      목록 썸네일로 사용됩니다.
                     </div>
                     <Input
                       id="review-image"
@@ -369,13 +412,20 @@ export default function Review() {
                   {pendingImages.length > 0 && (
                     <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
                       {pendingImages.map((item) => (
-                        <div key={item.id} className="relative overflow-hidden rounded-2xl border border-border/50 bg-background">
+                        <div
+                          key={item.id}
+                          className="relative overflow-hidden rounded-2xl border border-border/50 bg-background"
+                        >
                           <button
                             type="button"
                             onClick={() => setSelectedImage(item)}
                             className="block h-24 w-full cursor-pointer"
                           >
-                            <img src={item.dataUrl} alt={item.name} className="h-full w-full object-cover" />
+                            <img
+                              src={item.dataUrl}
+                              alt={item.name}
+                              className="h-full w-full object-cover"
+                            />
                           </button>
                           <button
                             type="button"
@@ -410,9 +460,9 @@ export default function Review() {
                       저장 중...
                     </>
                   ) : editDraft ? (
-                    '후기 수정 저장'
+                    "후기 수정 저장"
                   ) : (
-                    '후기 등록하기'
+                    "후기 등록하기"
                   )}
                 </Button>
               </form>
@@ -421,7 +471,10 @@ export default function Review() {
         </div>
       </div>
 
-      <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
+      <Dialog
+        open={!!selectedImage}
+        onOpenChange={(open) => !open && setSelectedImage(null)}
+      >
         <DialogContent className="w-[calc(100vw-1.5rem)] max-w-3xl">
           {selectedImage && (
             <>
@@ -429,7 +482,11 @@ export default function Review() {
                 <DialogTitle>{selectedImage.name}</DialogTitle>
               </DialogHeader>
               <div className="overflow-hidden rounded-2xl border border-border/50">
-                <img src={selectedImage.dataUrl} alt={selectedImage.name} className="max-h-[75vh] w-full object-contain" />
+                <img
+                  src={selectedImage.dataUrl}
+                  alt={selectedImage.name}
+                  className="max-h-[75vh] w-full object-contain"
+                />
               </div>
             </>
           )}

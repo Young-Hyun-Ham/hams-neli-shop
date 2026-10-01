@@ -1,6 +1,6 @@
-import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { initializeApp, getApp, getApps } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -14,7 +14,7 @@ const firebaseConfig = {
 const hasRequiredFirebaseConfig = Object.values(firebaseConfig).every(Boolean);
 
 if (!hasRequiredFirebaseConfig) {
-  console.warn('Firebase environment variables are missing.');
+  console.warn("Firebase environment variables are missing.");
 }
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);

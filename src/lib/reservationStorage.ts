@@ -9,15 +9,17 @@ import {
   runTransaction,
   serverTimestamp,
   Timestamp,
-} from 'firebase/firestore';
-import { db, isFirebaseConfigured } from './firebase';
-import { type Reservation } from './index';
+} from "firebase/firestore";
+import { db, isFirebaseConfigured } from "./firebase";
+import { type Reservation } from "./index";
 
-const RESERVATIONS_COLLECTION = 'reservations';
-const LOCAL_STORAGE_KEY = 'nail-shop-reservations';
+const RESERVATIONS_COLLECTION = "reservations";
+const LOCAL_STORAGE_KEY = "nail-shop-reservations";
 
-const getReservationsCollectionRef = () => collection(db, RESERVATIONS_COLLECTION);
-const getReservationSlotId = (date: string, time: string) => `${date}_${time.replace(':', '-')}`;
+const getReservationsCollectionRef = () =>
+  collection(db, RESERVATIONS_COLLECTION);
+const getReservationSlotId = (date: string, time: string) =>
+  `${date}_${time.replace(":", "-")}`;
 const getReservationDocRef = (date: string, time: string) =>
   doc(db, RESERVATIONS_COLLECTION, getReservationSlotId(date, time));
 
@@ -26,21 +28,23 @@ const normalizeReservation = (
   value: Partial<Reservation> & { createdAt?: string | Timestamp | null },
 ): Reservation => ({
   id,
-  date: value.date || '',
-  time: value.time || '',
-  name: value.name || '',
-  phone: value.phone || '',
-  serviceId: value.serviceId || '',
-  serviceName: value.serviceName || '',
-  settlementAmount: value.settlementAmount || '',
-  settlementMemo: value.settlementMemo || '',
+  date: value.date || "",
+  time: value.time || "",
+  name: value.name || "",
+  phone: value.phone || "",
+  serviceId: value.serviceId || "",
+  serviceName: value.serviceName || "",
+  settlementAmount: value.settlementAmount || "",
+  settlementMemo: value.settlementMemo || "",
   settlementUpdatedAt:
-    typeof value.settlementUpdatedAt === 'string' ? value.settlementUpdatedAt : '',
-  status: 'confirmed',
+    typeof value.settlementUpdatedAt === "string"
+      ? value.settlementUpdatedAt
+      : "",
+  status: "confirmed",
   createdAt:
     value.createdAt instanceof Timestamp
       ? value.createdAt.toDate().toISOString()
-      : typeof value.createdAt === 'string'
+      : typeof value.createdAt === "string"
         ? value.createdAt
         : new Date().toISOString(),
 });
@@ -53,7 +57,7 @@ const sortReservations = (items: Reservation[]) =>
   });
 
 const readLocalReservations = (): Reservation[] => {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return [];
   }
 
@@ -64,15 +68,19 @@ const readLocalReservations = (): Reservation[] => {
     }
 
     const parsed = JSON.parse(raw) as Array<Partial<Reservation>>;
-    return sortReservations(parsed.map((item, index) => normalizeReservation(item.id || `local-${index}`, item)));
+    return sortReservations(
+      parsed.map((item, index) =>
+        normalizeReservation(item.id || `local-${index}`, item),
+      ),
+    );
   } catch (error) {
-    console.error('Failed to read local reservations:', error);
+    console.error("Failed to read local reservations:", error);
     return [];
   }
 };
 
 const writeLocalReservations = (items: Reservation[]) => {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return;
   }
 
@@ -90,13 +98,19 @@ export const reservationStorage = {
     }
 
     return onSnapshot(
-      query(getReservationsCollectionRef(), orderBy('date', 'asc'), orderBy('time', 'asc')),
+      query(
+        getReservationsCollectionRef(),
+        orderBy("date", "asc"),
+        orderBy("time", "asc"),
+      ),
       (snapshot) => {
         onData(
           snapshot.docs.map((item) =>
             normalizeReservation(
               item.id,
-              item.data() as Partial<Reservation> & { createdAt?: string | Timestamp | null },
+              item.data() as Partial<Reservation> & {
+                createdAt?: string | Timestamp | null;
+              },
             ),
           ),
         );
@@ -121,23 +135,28 @@ export const reservationStorage = {
       );
 
       if (existingReservation) {
-        throw new Error('RESERVATION_ALREADY_EXISTS');
+        throw new Error("RESERVATION_ALREADY_EXISTS");
       }
 
-      const nextReservation = normalizeReservation(`local-${crypto.randomUUID()}`, {
-        date,
-        time,
-        name,
-        phone,
-        serviceId,
-        serviceName,
-        settlementAmount: '',
-        settlementMemo: '',
-        settlementUpdatedAt: '',
-        createdAt: new Date().toISOString(),
-      });
+      const nextReservation = normalizeReservation(
+        `local-${crypto.randomUUID()}`,
+        {
+          date,
+          time,
+          name,
+          phone,
+          serviceId,
+          serviceName,
+          settlementAmount: "",
+          settlementMemo: "",
+          settlementUpdatedAt: "",
+          createdAt: new Date().toISOString(),
+        },
+      );
 
-      writeLocalReservations(sortReservations([...readLocalReservations(), nextReservation]));
+      writeLocalReservations(
+        sortReservations([...readLocalReservations(), nextReservation]),
+      );
       return;
     }
 
@@ -145,14 +164,14 @@ export const reservationStorage = {
     const existingReservation = await getDoc(reservationDocRef);
 
     if (existingReservation.exists()) {
-      throw new Error('RESERVATION_ALREADY_EXISTS');
+      throw new Error("RESERVATION_ALREADY_EXISTS");
     }
 
     await runTransaction(db, async (transaction) => {
       const snapshot = await transaction.get(reservationDocRef);
 
       if (snapshot.exists()) {
-        throw new Error('RESERVATION_ALREADY_EXISTS');
+        throw new Error("RESERVATION_ALREADY_EXISTS");
       }
 
       transaction.set(reservationDocRef, {
@@ -160,9 +179,9 @@ export const reservationStorage = {
         time,
         name,
         phone,
-        serviceId: serviceId || '',
-        serviceName: serviceName || '',
-        status: 'confirmed',
+        serviceId: serviceId || "",
+        serviceName: serviceName || "",
+        status: "confirmed",
         createdAt: serverTimestamp(),
       });
     });
@@ -171,7 +190,7 @@ export const reservationStorage = {
   async updateReservation(
     currentDate: string,
     currentTime: string,
-    nextReservation: Pick<Reservation, 'date' | 'time' | 'name' | 'phone'>,
+    nextReservation: Pick<Reservation, "date" | "time" | "name" | "phone">,
   ): Promise<void> {
     if (!isFirebaseConfigured) {
       const reservations = readLocalReservations();
@@ -180,7 +199,7 @@ export const reservationStorage = {
       );
 
       if (currentIndex === -1) {
-        throw new Error('RESERVATION_NOT_FOUND');
+        throw new Error("RESERVATION_NOT_FOUND");
       }
 
       const duplicateIndex = reservations.findIndex(
@@ -191,7 +210,7 @@ export const reservationStorage = {
       );
 
       if (duplicateIndex >= 0) {
-        throw new Error('RESERVATION_ALREADY_EXISTS');
+        throw new Error("RESERVATION_ALREADY_EXISTS");
       }
 
       reservations[currentIndex] = {
@@ -204,20 +223,25 @@ export const reservationStorage = {
     }
 
     const currentDocRef = getReservationDocRef(currentDate, currentTime);
-    const nextDocRef = getReservationDocRef(nextReservation.date, nextReservation.time);
+    const nextDocRef = getReservationDocRef(
+      nextReservation.date,
+      nextReservation.time,
+    );
 
     await runTransaction(db, async (transaction) => {
       const currentSnapshot = await transaction.get(currentDocRef);
       if (!currentSnapshot.exists()) {
-        throw new Error('RESERVATION_NOT_FOUND');
+        throw new Error("RESERVATION_NOT_FOUND");
       }
 
-      const isSameSlot = currentDate === nextReservation.date && currentTime === nextReservation.time;
+      const isSameSlot =
+        currentDate === nextReservation.date &&
+        currentTime === nextReservation.time;
 
       if (!isSameSlot) {
         const nextSnapshot = await transaction.get(nextDocRef);
         if (nextSnapshot.exists()) {
-          throw new Error('RESERVATION_ALREADY_EXISTS');
+          throw new Error("RESERVATION_ALREADY_EXISTS");
         }
 
         transaction.set(nextDocRef, {
@@ -249,10 +273,10 @@ export const reservationStorage = {
   async updateReservationSettlement(
     date: string,
     time: string,
-    nextSettlement: Pick<Reservation, 'settlementAmount' | 'settlementMemo'>,
+    nextSettlement: Pick<Reservation, "settlementAmount" | "settlementMemo">,
   ): Promise<void> {
-    const settlementAmount = nextSettlement.settlementAmount?.trim() || '';
-    const settlementMemo = nextSettlement.settlementMemo?.trim() || '';
+    const settlementAmount = nextSettlement.settlementAmount?.trim() || "";
+    const settlementMemo = nextSettlement.settlementMemo?.trim() || "";
     const settlementUpdatedAt = new Date().toISOString();
 
     if (!isFirebaseConfigured) {
@@ -262,7 +286,7 @@ export const reservationStorage = {
       );
 
       if (currentIndex === -1) {
-        throw new Error('RESERVATION_NOT_FOUND');
+        throw new Error("RESERVATION_NOT_FOUND");
       }
 
       reservations[currentIndex] = {
@@ -281,7 +305,7 @@ export const reservationStorage = {
     await runTransaction(db, async (transaction) => {
       const snapshot = await transaction.get(reservationDocRef);
       if (!snapshot.exists()) {
-        throw new Error('RESERVATION_NOT_FOUND');
+        throw new Error("RESERVATION_NOT_FOUND");
       }
 
       transaction.update(reservationDocRef, {

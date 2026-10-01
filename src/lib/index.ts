@@ -1,10 +1,10 @@
 ﻿export const ROUTE_PATHS = {
-  HOME: '/',
-  EVENTS: '/events',
-  GALLERY: '/gallery',
-  TESTIMONIALS: '/testimonials',
-  REVIEW: '/review',
-  ADMIN: '/admin',
+  HOME: "/",
+  EVENTS: "/events",
+  GALLERY: "/gallery",
+  TESTIMONIALS: "/testimonials",
+  REVIEW: "/review",
+  ADMIN: "/admin",
 } as const;
 
 export interface EventItem {
@@ -80,7 +80,7 @@ export interface Testimonial {
   created_at?: string;
 }
 
-export type Weekday = '월' | '화' | '수' | '목' | '금' | '토' | '일';
+export type Weekday = "월" | "화" | "수" | "목" | "금" | "토" | "일";
 
 export interface TimeRange {
   startHour: string;
@@ -116,32 +116,32 @@ export interface Reservation {
   settlementAmount?: string;
   settlementMemo?: string;
   settlementUpdatedAt?: string;
-  status: 'confirmed';
+  status: "confirmed";
   createdAt: string;
 }
 
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
-  addressLine1: '서울 강남구 테헤란로 123',
-  addressLine2: '네일아트 빌딩 2층',
-  mapQuery: '서울 강남구 테헤란로 123',
-  phone: '02-1234-5678',
-  email: 'contact@nailart.com',
+  addressLine1: "서울 강남구 테헤란로 123",
+  addressLine2: "네일아트 빌딩 2층",
+  mapQuery: "서울 강남구 테헤란로 123",
+  phone: "02-1234-5678",
+  email: "contact@nailart.com",
   weekdayHours: {
-    startHour: '10',
-    startMinute: '00',
-    endHour: '20',
-    endMinute: '00',
+    startHour: "10",
+    startMinute: "00",
+    endHour: "20",
+    endMinute: "00",
   },
   weekendHours: {
-    startHour: '10',
-    startMinute: '00',
-    endHour: '18',
-    endMinute: '00',
+    startHour: "10",
+    startMinute: "00",
+    endHour: "18",
+    endMinute: "00",
   },
-  closedDays: ['월'],
-  instagramUrl: 'https://instagram.com',
-  tiktokUrl: 'https://www.tiktok.com/',
-  facebookUrl: 'https://facebook.com',
-  kakaoOpenChatUrl: 'https://open.kakao.com/',
-  xUrl: 'https://x.com',
+  closedDays: ["월"],
+  instagramUrl: "https://instagram.com",
+  tiktokUrl: "https://www.tiktok.com/",
+  facebookUrl: "https://facebook.com",
+  kakaoOpenChatUrl: "https://open.kakao.com/",
+  xUrl: "https://x.com",
 };

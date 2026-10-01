@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Image as ImageIcon, Loader2, Video as VideoIcon } from 'lucide-react';
-import { GalleryImageCard, VideoCard } from '@/components/Cards';
-import { Layout } from '@/components/Layout';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { type GalleryImage, type Video } from '@/lib/index';
-import { imageStorage } from '@/lib/imageStorage';
-import { videoStorage } from '@/lib/videoStorage';
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { Image as ImageIcon, Loader2, Video as VideoIcon } from "lucide-react";
+import { GalleryImageCard, VideoCard } from "@/components/Cards";
+import { Layout } from "@/components/Layout";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { type GalleryImage, type Video } from "@/lib/index";
+import { imageStorage } from "@/lib/imageStorage";
+import { videoStorage } from "@/lib/videoStorage";
 
 export default function Gallery() {
   const [videos, setVideos] = useState<Video[]>([]);
@@ -27,8 +27,10 @@ export default function Gallery() {
       setVideoError(null);
       setVideos(await videoStorage.getVideos());
     } catch (err) {
-      console.error('Failed to load videos:', err);
-      setVideoError('동영상을 불러오지 못했습니다. Firebase 설정을 확인해 주세요.');
+      console.error("Failed to load videos:", err);
+      setVideoError(
+        "동영상을 불러오지 못했습니다. Firebase 설정을 확인해 주세요.",
+      );
     } finally {
       setLoadingVideos(false);
     }
@@ -40,8 +42,10 @@ export default function Gallery() {
       setImageError(null);
       setImages(await imageStorage.getImages());
     } catch (err) {
-      console.error('Failed to load gallery images:', err);
-      setImageError('이미지를 불러오지 못했습니다. Firebase 설정을 확인해 주세요.');
+      console.error("Failed to load gallery images:", err);
+      setImageError(
+        "이미지를 불러오지 못했습니다. Firebase 설정을 확인해 주세요.",
+      );
     } finally {
       setLoadingImages(false);
     }
@@ -61,7 +65,8 @@ export default function Gallery() {
               네일아트 갤러리
             </h1>
             <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-              동영상과 이미지를 나눠서 보고, 원하는 작업 스타일을 빠르게 확인해 보세요.
+              동영상과 이미지를 나눠서 보고, 원하는 작업 스타일을 빠르게 확인해
+              보세요.
             </p>
           </motion.div>
 
@@ -98,7 +103,9 @@ export default function Gallery() {
                   animate={{ opacity: 1, scale: 1 }}
                   className="mx-auto max-w-md rounded-2xl border border-border bg-muted/30 p-12 text-center"
                 >
-                  <p className="text-lg text-muted-foreground">아직 등록된 동영상이 없습니다.</p>
+                  <p className="text-lg text-muted-foreground">
+                    아직 등록된 동영상이 없습니다.
+                  </p>
                 </motion.div>
               )}
 
@@ -109,16 +116,18 @@ export default function Gallery() {
                   transition={{ delay: 0.2 }}
                   className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3"
                 >
-                  {videos.filter((video) => video.visible !== false).map((video, index) => (
-                    <motion.div
-                      key={video.id}
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1, duration: 0.5 }}
-                    >
-                      <VideoCard video={video} />
-                    </motion.div>
-                  ))}
+                  {videos
+                    .filter((video) => video.visible !== false)
+                    .map((video, index) => (
+                      <motion.div
+                        key={video.id}
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1, duration: 0.5 }}
+                      >
+                        <VideoCard video={video} />
+                      </motion.div>
+                    ))}
                 </motion.div>
               )}
             </TabsContent>
@@ -142,7 +151,9 @@ export default function Gallery() {
                   animate={{ opacity: 1, scale: 1 }}
                   className="mx-auto max-w-md rounded-2xl border border-border bg-muted/30 p-12 text-center"
                 >
-                  <p className="text-lg text-muted-foreground">아직 등록된 이미지가 없습니다.</p>
+                  <p className="text-lg text-muted-foreground">
+                    아직 등록된 이미지가 없습니다.
+                  </p>
                 </motion.div>
               )}
 
@@ -153,16 +164,18 @@ export default function Gallery() {
                   transition={{ delay: 0.2 }}
                   className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3"
                 >
-                  {images.filter((image) => image.visible !== false).map((image, index) => (
-                    <motion.div
-                      key={image.id}
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.08, duration: 0.5 }}
-                    >
-                      <GalleryImageCard image={image} />
-                    </motion.div>
-                  ))}
+                  {images
+                    .filter((image) => image.visible !== false)
+                    .map((image, index) => (
+                      <motion.div
+                        key={image.id}
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.08, duration: 0.5 }}
+                      >
+                        <GalleryImageCard image={image} />
+                      </motion.div>
+                    ))}
                 </motion.div>
               )}
             </TabsContent>

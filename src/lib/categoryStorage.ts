@@ -8,27 +8,34 @@ import {
   orderBy,
   query,
   updateDoc,
-} from 'firebase/firestore';
-import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import type { GalleryCategory } from './index';
-import { db, isFirebaseConfigured, storage } from './firebase';
+} from "firebase/firestore";
+import {
+  deleteObject,
+  getDownloadURL,
+  ref,
+  uploadBytes,
+} from "firebase/storage";
+import type { GalleryCategory } from "./index";
+import { db, isFirebaseConfigured, storage } from "./firebase";
 
-const CATEGORIES_COLLECTION = 'galleryCategories';
+const CATEGORIES_COLLECTION = "galleryCategories";
 
-type CreateCategoryInput = Omit<GalleryCategory, 'id' | 'created_at'>;
-type UpdateCategoryInput = Omit<GalleryCategory, 'id' | 'created_at'> & {
+type CreateCategoryInput = Omit<GalleryCategory, "id" | "created_at">;
+type UpdateCategoryInput = Omit<GalleryCategory, "id" | "created_at"> & {
   previousImage?: string;
 };
 
 const assertFirebaseConfigured = () => {
   if (!isFirebaseConfigured) {
-    throw new Error('Firebase is not configured. Check your VITE_FIREBASE_* environment variables.');
+    throw new Error(
+      "Firebase is not configured. Check your VITE_FIREBASE_* environment variables.",
+    );
   }
 };
 
 const getFileExtension = (file: File) => {
-  const parts = file.name.split('.');
-  return (parts[parts.length - 1] || 'jpg').toLowerCase();
+  const parts = file.name.split(".");
+  return (parts[parts.length - 1] || "jpg").toLowerCase();
 };
 
 const deleteStoredImage = async (url?: string) => {
@@ -39,11 +46,14 @@ const deleteStoredImage = async (url?: string) => {
   try {
     await deleteObject(ref(storage, url));
   } catch (error) {
-    console.error('Failed to delete category image file:', error);
+    console.error("Failed to delete category image file:", error);
   }
 };
 
-const withDefaults = (item: Omit<GalleryCategory, 'id'>, id: string): GalleryCategory => ({
+const withDefaults = (
+  item: Omit<GalleryCategory, "id">,
+  id: string,
+): GalleryCategory => ({
   ...item,
   id,
   visible: item.visible ?? true,
@@ -52,7 +62,7 @@ const withDefaults = (item: Omit<GalleryCategory, 'id'>, id: string): GalleryCat
 export const categoryStorage = {
   createCategoriesQuery() {
     assertFirebaseConfigured();
-    return query(collection(db, CATEGORIES_COLLECTION), orderBy('name', 'asc'));
+    return query(collection(db, CATEGORIES_COLLECTION), orderBy("name", "asc"));
   },
 
   async getCategories(): Promise<GalleryCategory[]> {
@@ -60,7 +70,10 @@ export const categoryStorage = {
     const snapshot = await getDocs(categoriesQuery);
 
     return snapshot.docs.map((snapshotDoc) =>
-      withDefaults(snapshotDoc.data() as Omit<GalleryCategory, 'id'>, snapshotDoc.id),
+      withDefaults(
+        snapshotDoc.data() as Omit<GalleryCategory, "id">,
+        snapshotDoc.id,
+      ),
     );
   },
 
@@ -74,7 +87,10 @@ export const categoryStorage = {
       categoriesQuery,
       (snapshot: any) => {
         const items = snapshot.docs.map((snapshotDoc: any) =>
-          withDefaults(snapshotDoc.data() as Omit<GalleryCategory, 'id'>, snapshotDoc.id),
+          withDefaults(
+            snapshotDoc.data() as Omit<GalleryCategory, "id">,
+            snapshotDoc.id,
+          ),
         );
 
         onData(items);
@@ -115,7 +131,10 @@ export const categoryStorage = {
     };
   },
 
-  async updateCategory(id: string, updates: UpdateCategoryInput): Promise<void> {
+  async updateCategory(
+    id: string,
+    updates: UpdateCategoryInput,
+  ): Promise<void> {
     assertFirebaseConfigured();
 
     const { previousImage, ...payload } = updates;
@@ -124,7 +143,10 @@ export const categoryStorage = {
       await deleteStoredImage(previousImage);
     }
 
-    await updateDoc(doc(db, CATEGORIES_COLLECTION, id), { ...payload, visible: payload.visible ?? true });
+    await updateDoc(doc(db, CATEGORIES_COLLECTION, id), {
+      ...payload,
+      visible: payload.visible ?? true,
+    });
   },
 
   async deleteCategory(category: GalleryCategory): Promise<void> {

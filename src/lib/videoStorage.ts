@@ -8,18 +8,20 @@ import {
   orderBy,
   query,
   updateDoc,
-} from 'firebase/firestore';
-import type { Video } from './index';
-import { db, isFirebaseConfigured } from './firebase';
+} from "firebase/firestore";
+import type { Video } from "./index";
+import { db, isFirebaseConfigured } from "./firebase";
 
-const VIDEOS_COLLECTION = 'videos';
+const VIDEOS_COLLECTION = "videos";
 
-type CreateVideoInput = Omit<Video, 'id' | 'created_at'>;
-type UpdateVideoInput = Omit<Video, 'id' | 'created_at'>;
+type CreateVideoInput = Omit<Video, "id" | "created_at">;
+type UpdateVideoInput = Omit<Video, "id" | "created_at">;
 
 const assertFirebaseConfigured = () => {
   if (!isFirebaseConfigured) {
-    throw new Error('Firebase is not configured. Check your VITE_FIREBASE_* environment variables.');
+    throw new Error(
+      "Firebase is not configured. Check your VITE_FIREBASE_* environment variables.",
+    );
   }
 };
 
@@ -29,14 +31,14 @@ export const videoStorage = {
 
     const videosQuery = query(
       collection(db, VIDEOS_COLLECTION),
-      orderBy('created_at', 'desc'),
+      orderBy("created_at", "desc"),
     );
     const snapshot = await getDocs(videosQuery);
 
     return snapshot.docs.map((snapshotDoc) => ({
-      ...(snapshotDoc.data() as Omit<Video, 'id'>),
+      ...(snapshotDoc.data() as Omit<Video, "id">),
       id: snapshotDoc.id,
-      visible: (snapshotDoc.data() as Omit<Video, 'id'>).visible ?? true,
+      visible: (snapshotDoc.data() as Omit<Video, "id">).visible ?? true,
     }));
   },
 
@@ -49,9 +51,9 @@ export const videoStorage = {
     }
 
     return {
-      ...(videoDoc.data() as Omit<Video, 'id'>),
+      ...(videoDoc.data() as Omit<Video, "id">),
       id: videoDoc.id,
-      visible: (videoDoc.data() as Omit<Video, 'id'>).visible ?? true,
+      visible: (videoDoc.data() as Omit<Video, "id">).visible ?? true,
     };
   },
 
@@ -75,7 +77,10 @@ export const videoStorage = {
 
   async updateVideo(id: string, updates: UpdateVideoInput): Promise<void> {
     assertFirebaseConfigured();
-    await updateDoc(doc(db, VIDEOS_COLLECTION, id), { ...updates, visible: updates.visible ?? true });
+    await updateDoc(doc(db, VIDEOS_COLLECTION, id), {
+      ...updates,
+      visible: updates.visible ?? true,
+    });
   },
 
   async deleteVideo(id: string): Promise<void> {

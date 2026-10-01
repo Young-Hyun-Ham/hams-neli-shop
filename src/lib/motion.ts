@@ -1,13 +1,13 @@
 /**
  * Apple-style Spring Animation Presets and Variants
- * 
+ *
  * Core Philosophy: Apple Motion = Spring Physics + Damped Settling + Physical Inertia
  * - Natural onset (not sudden start)
  * - Elegant settling (not abrupt stop)
  * - Physical weight (like real objects moving)
  */
 
-import type { Transition, Variants } from "framer-motion"
+import type { Transition, Variants } from "framer-motion";
 
 // ============================================
 // Spring Presets
@@ -16,19 +16,34 @@ import type { Transition, Variants } from "framer-motion"
 export const springPresets = {
   /** Standard interaction - buttons, card hover (~200ms) */
   snappy: { type: "spring", stiffness: 400, damping: 30 } as Transition,
-  
+
   /** Gentle transition - panels, modals (~350ms) */
   gentle: { type: "spring", stiffness: 300, damping: 35 } as Transition,
-  
+
   /** Elastic emphasis - success feedback, key elements (~300ms) */
-  bouncy: { type: "spring", stiffness: 500, damping: 25, mass: 0.8 } as Transition,
-  
+  bouncy: {
+    type: "spring",
+    stiffness: 500,
+    damping: 25,
+    mass: 0.8,
+  } as Transition,
+
   /** Elegant settling - page transitions, large elements (~500ms) */
-  smooth: { type: "spring", stiffness: 200, damping: 40, mass: 1.2 } as Transition,
-  
+  smooth: {
+    type: "spring",
+    stiffness: 200,
+    damping: 40,
+    mass: 1.2,
+  } as Transition,
+
   /** Inertial slide - lists, carousels */
-  inertia: { type: "spring", stiffness: 150, damping: 20, mass: 0.5 } as Transition,
-}
+  inertia: {
+    type: "spring",
+    stiffness: 150,
+    damping: 20,
+    mass: 0.5,
+  } as Transition,
+};
 
 // ============================================
 // Apple Easing Curves (for non-Spring scenarios)
@@ -37,13 +52,13 @@ export const springPresets = {
 export const appleEase = {
   /** iOS standard curve */
   standard: [0.25, 0.1, 0.25, 1.0] as const,
-  
+
   /** iOS ease out curve */
   out: [0.22, 1, 0.36, 1] as const,
-  
+
   /** iOS decelerate curve */
   decelerate: [0, 0, 0.2, 1] as const,
-}
+};
 
 // ============================================
 // Animation Variants
@@ -61,7 +76,7 @@ export const fadeInUp: Variants = {
       damping: 30,
     },
   },
-}
+};
 
 /** Elastic scale in */
 export const scaleIn: Variants = {
@@ -75,7 +90,7 @@ export const scaleIn: Variants = {
       damping: 25,
     },
   },
-}
+};
 
 /** Stagger container for child animations */
 export const staggerContainer: Variants = {
@@ -87,7 +102,7 @@ export const staggerContainer: Variants = {
       delayChildren: 0.1,
     },
   },
-}
+};
 
 /** Stagger item (use with staggerContainer) */
 export const staggerItem: Variants = {
@@ -101,7 +116,7 @@ export const staggerItem: Variants = {
       damping: 30,
     },
   },
-}
+};
 
 /** Hover lift effect (Apple Card style) */
 export const hoverLift: Variants = {
@@ -120,7 +135,7 @@ export const hoverLift: Variants = {
       damping: 25,
     },
   },
-}
+};
 
 /** Tap/press scale feedback */
 export const tapScale: Variants = {
@@ -133,7 +148,7 @@ export const tapScale: Variants = {
       damping: 30,
     },
   },
-}
+};
 
 /** Modal overlay fade */
 export const modalOverlay: Variants = {
@@ -146,7 +161,7 @@ export const modalOverlay: Variants = {
     opacity: 0,
     transition: { duration: 0.15 },
   },
-}
+};
 
 /** Modal content with elegant settling */
 export const modalContent: Variants = {
@@ -166,7 +181,7 @@ export const modalContent: Variants = {
     scale: 0.95,
     transition: { duration: 0.15 },
   },
-}
+};
 
 /** Page route transition */
 export const pageTransition: Variants = {
@@ -185,4 +200,4 @@ export const pageTransition: Variants = {
     x: -20,
     transition: { duration: 0.2 },
   },
-}
+};

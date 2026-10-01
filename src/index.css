@@ -41,19 +41,20 @@
 
 :root {
   /* Typography */
-  --font-sans: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
-  
+  --font-sans:
+    "Noto Sans KR", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Courier New", monospace;
+
   /* Radius */
   --radius: 0.75rem;
 
   /* Core UI Tokens */
   --background: oklch(0.99 0.005 330);
-  --foreground: oklch(0.20 0.015 330);
+  --foreground: oklch(0.2 0.015 330);
   --card: oklch(0.98 0.01 320);
   --card-foreground: oklch(0.22 0.015 330);
   --popover: oklch(0.99 0.008 330);
-  --popover-foreground: oklch(0.20 0.015 330);
+  --popover-foreground: oklch(0.2 0.015 330);
   --primary: oklch(0.68 0.18 330);
   --primary-foreground: oklch(0.99 0.005 330);
   --secondary: oklch(0.75 0.12 30);
@@ -62,19 +63,19 @@
   --muted-foreground: oklch(0.48 0.03 280);
   --accent: oklch(0.72 0.15 320);
   --accent-foreground: oklch(0.99 0.005 320);
-  --destructive: oklch(0.65 0.20 10);
+  --destructive: oklch(0.65 0.2 10);
   --destructive-foreground: oklch(0.99 0.005 10);
-  --border: oklch(0.90 0.015 320);
+  --border: oklch(0.9 0.015 320);
   --input: oklch(0.92 0.015 320);
   --ring: oklch(0.68 0.18 330);
-  
+
   /* Chart Tokens */
-  --chart-1: oklch(0.70 0.18 330);
+  --chart-1: oklch(0.7 0.18 330);
   --chart-2: oklch(0.72 0.14 30);
   --chart-3: oklch(0.68 0.12 280);
   --chart-4: oklch(0.65 0.16 150);
   --chart-5: oklch(0.62 0.18 200);
-  
+
   /* Sidebar Tokens */
   --sidebar: oklch(0.97 0.01 330);
   --sidebar-foreground: oklch(0.25 0.015 330);
@@ -93,7 +94,7 @@
   --card-foreground: oklch(0.93 0.01 330);
   --popover: oklch(0.16 0.02 330);
   --popover-foreground: oklch(0.95 0.01 330);
-  --primary: oklch(0.75 0.20 330);
+  --primary: oklch(0.75 0.2 330);
   --primary-foreground: oklch(0.15 0.02 330);
   --secondary: oklch(0.68 0.14 30);
   --secondary-foreground: oklch(0.15 0.02 30);
@@ -101,28 +102,28 @@
   --muted-foreground: oklch(0.65 0.04 280);
   --accent: oklch(0.72 0.18 320);
   --accent-foreground: oklch(0.15 0.02 320);
-  --destructive: oklch(0.70 0.22 10);
+  --destructive: oklch(0.7 0.22 10);
   --destructive-foreground: oklch(0.98 0.01 10);
   --border: oklch(0.28 0.03 320);
   --input: oklch(0.26 0.03 320);
-  --ring: oklch(0.75 0.20 330);
-  
+  --ring: oklch(0.75 0.2 330);
+
   /* Chart Tokens */
-  --chart-1: oklch(0.75 0.20 330);
-  --chart-2: oklch(0.70 0.16 30);
+  --chart-1: oklch(0.75 0.2 330);
+  --chart-2: oklch(0.7 0.16 30);
   --chart-3: oklch(0.68 0.14 280);
   --chart-4: oklch(0.72 0.18 150);
-  --chart-5: oklch(0.70 0.20 200);
-  
+  --chart-5: oklch(0.7 0.2 200);
+
   /* Sidebar Tokens */
   --sidebar: oklch(0.17 0.025 330);
-  --sidebar-foreground: oklch(0.90 0.01 330);
-  --sidebar-primary: oklch(0.75 0.20 330);
+  --sidebar-foreground: oklch(0.9 0.01 330);
+  --sidebar-primary: oklch(0.75 0.2 330);
   --sidebar-primary-foreground: oklch(0.15 0.02 330);
   --sidebar-accent: oklch(0.72 0.18 320);
   --sidebar-accent-foreground: oklch(0.93 0.01 320);
   --sidebar-border: oklch(0.26 0.03 320);
-  --sidebar-ring: oklch(0.75 0.20 330);
+  --sidebar-ring: oklch(0.75 0.2 330);
 }
 
 @theme inline {
@@ -189,11 +190,17 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-semibold tracking-tight;
   }
 
-  code, pre {
+  code,
+  pre {
     @apply font-mono;
   }
 
@@ -210,5 +217,56 @@
   }
   ::-webkit-scrollbar-thumb {
     @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40;
+  }
+}
+
+@layer components {
+  .event-content h1 {
+    @apply mb-4 text-3xl font-bold;
+  }
+
+  .event-content h2 {
+    @apply mb-3 text-2xl font-bold;
+  }
+
+  .event-content h3,
+  .event-content h4 {
+    @apply mb-2 text-xl font-semibold;
+  }
+
+  .event-content p,
+  .event-content ul,
+  .event-content ol,
+  .event-content blockquote,
+  .event-content pre {
+    @apply mb-3 last:mb-0;
+  }
+
+  .event-content ul {
+    @apply list-disc pl-6;
+  }
+
+  .event-content ol {
+    @apply list-decimal pl-6;
+  }
+
+  .event-content blockquote {
+    @apply border-l-4 border-primary/40 pl-4 italic;
+  }
+
+  .event-content a {
+    @apply font-medium text-primary underline underline-offset-4;
+  }
+
+  .event-content code {
+    @apply rounded bg-muted px-1.5 py-0.5 text-sm;
+  }
+
+  .event-content pre {
+    @apply overflow-x-auto rounded-lg bg-muted p-4;
+  }
+
+  .event-content hr {
+    @apply my-5 border-border;
   }
 }

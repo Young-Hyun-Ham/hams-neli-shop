@@ -1,9 +1,6 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
-import {
-  fetchServiceViewer,
-  type ServiceViewer,
-} from '@/lib/sso';
+import { fetchServiceViewer, type ServiceViewer } from "@/lib/sso";
 
 type AuthStoreState = {
   viewer: ServiceViewer | null;
@@ -29,7 +26,7 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
         authLoading: false,
       });
     } catch (error) {
-      console.error('Failed to fetch service viewer:', error);
+      console.error("Failed to fetch service viewer:", error);
       set({
         viewer: null,
         authLoading: false,

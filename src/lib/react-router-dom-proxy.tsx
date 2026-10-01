@@ -19,12 +19,15 @@ const routesReadyPromise = new Promise<void>((res) => {
 
 // Optional: avoid waiting forever if <Routes> never mounts
 const routesReadyOrTimeout = (ms = 1200) =>
-  Promise.race([routesReadyPromise, new Promise<void>((r) => setTimeout(r, ms))]);
+  Promise.race([
+    routesReadyPromise,
+    new Promise<void>((r) => setTimeout(r, ms)),
+  ]);
 
 type AnyEl = React.ReactNode;
 
-function normalize(p: string) { 
-  return p.replace(/\/+/g, "/"); 
+function normalize(p: string) {
+  return p.replace(/\/+/g, "/");
 }
 
 function join(base: string, child?: string) {
@@ -36,15 +39,17 @@ function join(base: string, child?: string) {
 function flattenRoutes(node: AnyEl, base = "", acc = new Set<string>()) {
   React.Children.forEach(node, (child) => {
     if (!React.isValidElement(child)) return;
-    const isRoute = child.type === (RRD as any).Route ||
-      (typeof child.type === "function" && (child.type as any).name === "Route");
+    const isRoute =
+      child.type === (RRD as any).Route ||
+      (typeof child.type === "function" &&
+        (child.type as any).name === "Route");
     if (isRoute) {
-      const { path, index, children } = (child.props ?? {}) as { 
-        path?: string; 
-        index?: boolean; 
-        children?: AnyEl; 
+      const { path, index, children } = (child.props ?? {}) as {
+        path?: string;
+        index?: boolean;
+        children?: AnyEl;
       };
-      const cur = index ? (base || "/") : (path ? join(base, path) : base);
+      const cur = index ? base || "/" : path ? join(base, path) : base;
       if (index || path) acc.add(cur || "/");
       if (children) flattenRoutes(children, cur, acc);
     } else {
@@ -59,27 +64,27 @@ function postAllRoutesOnce(children: AnyEl) {
   if (routesPosted) return;
   try {
     const list = Array.from(flattenRoutes(children)).sort();
-    
+
     // Always log routes in development for debugging
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Routes:', list);
+    if (process.env.NODE_ENV === "development") {
+      console.log("Routes:", list);
     }
-    
+
     // Check if route messaging is enabled
     if (!__ROUTE_MESSAGING_ENABLED__) {
       return;
     }
-    
+
     if (window.top && window.top !== window) {
       // Use the same format as ROUTES_INFO in use-route-messenger
-      const routesForMessage = list.map(route => ({
-        path: route
+      const routesForMessage = list.map((route) => ({
+        path: route,
       }));
 
       const routesMessage = {
-        type: 'ROUTES_INFO',
+        type: "ROUTES_INFO",
         routes: routesForMessage,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       window.top.postMessage(routesMessage, "*");
@@ -94,7 +99,9 @@ function postAllRoutesOnce(children: AnyEl) {
 
 /** Our patched <Routes/>: same API, just posts route list once. */
 export function Routes(props: React.ComponentProps<typeof RRD.Routes>) {
-  React.useEffect(() => { postAllRoutesOnce(props.children); }, []);
+  React.useEffect(() => {
+    postAllRoutesOnce(props.children);
+  }, []);
   return React.createElement(RRD.Routes, { ...props });
 }
 
@@ -105,21 +112,21 @@ function emitRouteChange(location: ReturnType<typeof RRD.useLocation>) {
   const path = `${location.pathname}${location.search}${location.hash}`;
   if (path === lastEmittedPath) return;
   lastEmittedPath = path;
-  
+
   // Check if route messaging is enabled
   if (!__ROUTE_MESSAGING_ENABLED__) {
     return;
   }
-  
+
   if (window.top && window.top !== window) {
     const routeChangeMessage = {
-      type: 'ROUTE_CHANGE',
+      type: "ROUTE_CHANGE",
       path: location.pathname,
       hash: location.hash,
       search: location.search,
       fullPath: location.pathname + location.search + location.hash,
       fullUrl: window.location.href,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     window.top.postMessage(routeChangeMessage, "*");
@@ -128,11 +135,16 @@ function emitRouteChange(location: ReturnType<typeof RRD.useLocation>) {
 
 /** --------------------- Inbound: commands from parent --------------------- */
 type IframeCmd =
-  | { type: "ROUTE_CONTROL"; action: "navigate"; path: string; replace?: boolean; }
-  | { type: "ROUTE_CONTROL"; action: "back"; }
-  | { type: "ROUTE_CONTROL"; action: "forward"; }
-  | { type: "ROUTE_CONTROL"; action: "replace"; path: string; }
-  | { type: "RELOAD"; };
+  | {
+      type: "ROUTE_CONTROL";
+      action: "navigate";
+      path: string;
+      replace?: boolean;
+    }
+  | { type: "ROUTE_CONTROL"; action: "back" }
+  | { type: "ROUTE_CONTROL"; action: "forward" }
+  | { type: "ROUTE_CONTROL"; action: "replace"; path: string }
+  | { type: "RELOAD" };
 
 /** A component that lives inside the router context and bridges both ways */
 function RouterBridge(): null {
@@ -142,7 +154,7 @@ function RouterBridge(): null {
   React.useEffect(() => {
     (async () => {
       // Ensure ROUTES_INFO is delivered first
-      await routesReadyOrTimeout();   // waits for <Routes/> to post, or times out (dev-safety)
+      await routesReadyOrTimeout(); // waits for <Routes/> to post, or times out (dev-safety)
       emitRouteChange(location);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -152,7 +164,7 @@ function RouterBridge(): null {
     function onMessage(e: MessageEvent) {
       const data = e.data as IframeCmd | any;
       if (!data) return;
-      
+
       // Check if route messaging is enabled
       if (!__ROUTE_MESSAGING_ENABLED__) {
         return;
@@ -161,47 +173,51 @@ function RouterBridge(): null {
       try {
         if (data.type === "ROUTE_CONTROL") {
           const { action, path, replace = false } = data;
-          
-          console.log('Received route control command:', data);
+
+          console.log("Received route control command:", data);
 
           switch (action) {
-            case 'navigate':
+            case "navigate":
               if (path) {
                 navigate(path, { replace });
                 console.log(`Navigated to: ${path} (replace: ${replace})`);
               } else {
-                console.error('Route control: path is required for navigate action');
+                console.error(
+                  "Route control: path is required for navigate action",
+                );
               }
               break;
-              
-            case 'back':
+
+            case "back":
               navigate(-1);
-              console.log('Navigated back');
+              console.log("Navigated back");
               break;
-              
-            case 'forward':
+
+            case "forward":
               navigate(1);
-              console.log('Navigated forward');
+              console.log("Navigated forward");
               break;
-              
-            case 'replace':
+
+            case "replace":
               if (path) {
                 navigate(path, { replace: true });
                 console.log(`Replaced route with: ${path}`);
               } else {
-                console.error('Route control: path is required for replace action');
+                console.error(
+                  "Route control: path is required for replace action",
+                );
               }
               break;
-              
+
             default:
-              console.warn('Route control: unknown action', action);
+              console.warn("Route control: unknown action", action);
           }
         } else if (data.type === "RELOAD") {
           window.location.reload();
-          console.log('Reloaded');
+          console.log("Reloaded");
         }
       } catch (error) {
-        console.error('Route control error:', error);
+        console.error("Route control error:", error);
       }
     }
     window.addEventListener("message", onMessage);
@@ -223,13 +239,25 @@ function withBridge(children: React.ReactNode) {
 }
 
 export function HashRouter(props: React.ComponentProps<typeof RRD.HashRouter>) {
-  return <RRD.HashRouter {...props}>{withBridge(props.children)}</RRD.HashRouter>;
+  return (
+    <RRD.HashRouter {...props}>{withBridge(props.children)}</RRD.HashRouter>
+  );
 }
 
-export function BrowserRouter(props: React.ComponentProps<typeof RRD.BrowserRouter>) {
-  return <RRD.BrowserRouter {...props}>{withBridge(props.children)}</RRD.BrowserRouter>;
+export function BrowserRouter(
+  props: React.ComponentProps<typeof RRD.BrowserRouter>,
+) {
+  return (
+    <RRD.BrowserRouter {...props}>
+      {withBridge(props.children)}
+    </RRD.BrowserRouter>
+  );
 }
 
-export function MemoryRouter(props: React.ComponentProps<typeof RRD.MemoryRouter>) {
-  return <RRD.MemoryRouter {...props}>{withBridge(props.children)}</RRD.MemoryRouter>;
+export function MemoryRouter(
+  props: React.ComponentProps<typeof RRD.MemoryRouter>,
+) {
+  return (
+    <RRD.MemoryRouter {...props}>{withBridge(props.children)}</RRD.MemoryRouter>
+  );
 }

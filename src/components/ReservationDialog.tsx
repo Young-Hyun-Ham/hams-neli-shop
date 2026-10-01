@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
-import { addDays, format, getDay, startOfDay } from 'date-fns';
-import { ko } from 'date-fns/locale';
-import { CalendarDays, Check, Clock3, UserRound } from 'lucide-react';
-import { type Matcher } from 'react-day-picker';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
+import { useEffect, useMemo, useState } from "react";
+import { addDays, format, getDay, startOfDay } from "date-fns";
+import { ko } from "date-fns/locale";
+import { CalendarDays, Check, Clock3, UserRound } from "lucide-react";
+import { type Matcher } from "react-day-picker";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
@@ -12,16 +12,27 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { type Reservation, type Service, type SiteSettings, type Weekday } from '@/lib/index';
-import { reservationStorage } from '@/lib/reservationStorage';
-import { serviceStorage } from '@/lib/serviceStorage';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  type Reservation,
+  type Service,
+  type SiteSettings,
+  type Weekday,
+} from "@/lib/index";
+import { reservationStorage } from "@/lib/reservationStorage";
+import { serviceStorage } from "@/lib/serviceStorage";
+import { cn } from "@/lib/utils";
 
-import { useAuthStore } from '@/lib/auth-store';
-import { ServiceViewer } from '@/lib/sso';
+import { useAuthStore } from "@/lib/auth-store";
+import { ServiceViewer } from "@/lib/sso";
 
 interface ReservationDialogProps {
   open: boolean;
@@ -29,22 +40,25 @@ interface ReservationDialogProps {
   siteSettings: SiteSettings;
 }
 
-const STEP_LABELS = ['날짜 선택', '시간 선택', '예약 확인'] as const;
-const KOREAN_WEEKDAYS: Weekday[] = ['일', '월', '화', '수', '목', '금', '토'];
+const STEP_LABELS = ["날짜 선택", "시간 선택", "예약 확인"] as const;
+const KOREAN_WEEKDAYS: Weekday[] = ["일", "월", "화", "수", "목", "금", "토"];
 const SLOT_MINUTES = 60;
 
-const pad = (value: number) => value.toString().padStart(2, '0');
-const toDateKey = (value: Date) => format(value, 'yyyy-MM-dd');
-const toTimeLabel = (minutes: number) => `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+const pad = (value: number) => value.toString().padStart(2, "0");
+const toDateKey = (value: Date) => format(value, "yyyy-MM-dd");
+const toTimeLabel = (minutes: number) =>
+  `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
 
 const timeToMinutes = (value: string) => {
-  const [hours, minutes] = value.split(':').map(Number);
+  const [hours, minutes] = value.split(":").map(Number);
   return hours * 60 + minutes;
 };
 
 const getTimeRangeByDate = (date: Date, siteSettings: SiteSettings) => {
   const day = getDay(date);
-  return day === 0 || day === 6 ? siteSettings.weekendHours : siteSettings.weekdayHours;
+  return day === 0 || day === 6
+    ? siteSettings.weekendHours
+    : siteSettings.weekdayHours;
 };
 
 const getSlotsForDate = (date: Date, siteSettings: SiteSettings) => {
@@ -53,7 +67,11 @@ const getSlotsForDate = (date: Date, siteSettings: SiteSettings) => {
   const endMinutes = Number(range.endHour) * 60 + Number(range.endMinute);
   const slots: string[] = [];
 
-  for (let current = startMinutes; current + SLOT_MINUTES <= endMinutes; current += SLOT_MINUTES) {
+  for (
+    let current = startMinutes;
+    current + SLOT_MINUTES <= endMinutes;
+    current += SLOT_MINUTES
+  ) {
     slots.push(toTimeLabel(current));
   }
 
@@ -72,20 +90,24 @@ const isPastSlotToday = (date: Date, time: string) => {
   return timeToMinutes(time) <= now.getHours() * 60 + now.getMinutes();
 };
 
-export function ReservationDialog({ open, onOpenChange, siteSettings }: ReservationDialogProps) {
+export function ReservationDialog({
+  open,
+  onOpenChange,
+  siteSettings,
+}: ReservationDialogProps) {
   const viewer: ServiceViewer | null = useAuthStore((state) => state.viewer);
 
   const [step, setStep] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [selectedServiceId, setSelectedServiceId] = useState("");
   const [services, setServices] = useState<Service[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     let unsubscribeServices = () => {};
@@ -94,8 +116,10 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
         setReservations(items);
       },
       (subscriptionError) => {
-        console.error('Failed to subscribe reservations:', subscriptionError);
-        setError('예약 현황을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+        console.error("Failed to subscribe reservations:", subscriptionError);
+        setError(
+          "예약 현황을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        );
       },
     );
 
@@ -105,11 +129,11 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
           setServices(items.filter((service) => service.visible !== false));
         },
         (subscriptionError) => {
-          console.error('Failed to subscribe services:', subscriptionError);
+          console.error("Failed to subscribe services:", subscriptionError);
         },
       );
     } catch (error) {
-      console.error('Failed to initialize service subscription:', error);
+      console.error("Failed to initialize service subscription:", error);
     }
 
     return () => {
@@ -123,32 +147,35 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
       setStep(0);
       setSelectedDate(undefined);
       setSelectedTime(null);
-      setCustomerName('');
-      setCustomerPhone('');
-      setSelectedServiceId('');
+      setCustomerName("");
+      setCustomerPhone("");
+      setSelectedServiceId("");
       setSubmitting(false);
-      setError('');
-      setSuccess('');
+      setError("");
+      setSuccess("");
     }
   }, [open]);
 
   useEffect(() => {
     // console.log('Viewer data in ReservationDialog:', viewer)
     if (viewer) {
-      setCustomerName(viewer?.nickname || '');
-      setCustomerPhone(viewer?.phoneNumber || '');
+      setCustomerName(viewer?.nickname || "");
+      setCustomerPhone(viewer?.phoneNumber || "");
     }
   }, [viewer]);
 
   const reservationsByDate = useMemo(() => {
-    return reservations.reduce<Record<string, Set<string>>>((accumulator, reservation) => {
-      if (!accumulator[reservation.date]) {
-        accumulator[reservation.date] = new Set();
-      }
+    return reservations.reduce<Record<string, Set<string>>>(
+      (accumulator, reservation) => {
+        if (!accumulator[reservation.date]) {
+          accumulator[reservation.date] = new Set();
+        }
 
-      accumulator[reservation.date].add(reservation.time);
-      return accumulator;
-    }, {});
+        accumulator[reservation.date].add(reservation.time);
+        return accumulator;
+      },
+      {},
+    );
   }, [reservations]);
 
   const disabledDates = useMemo<Matcher[]>(() => {
@@ -169,7 +196,9 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
           return false;
         }
 
-        return slots.length > 0 && slots.every((slot) => reservedSlots.has(slot));
+        return (
+          slots.length > 0 && slots.every((slot) => reservedSlots.has(slot))
+        );
       },
     ];
   }, [reservationsByDate, siteSettings]);
@@ -189,8 +218,8 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
   }, [reservationsByDate, selectedDate, siteSettings]);
 
   const selectedDateLabel = selectedDate
-    ? format(selectedDate, 'yyyy년 M월 d일 (EEE)', { locale: ko })
-    : '';
+    ? format(selectedDate, "yyyy년 M월 d일 (EEE)", { locale: ko })
+    : "";
 
   const canGoNext =
     (step === 0 && Boolean(selectedDate)) ||
@@ -203,8 +232,8 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
     setSelectedTime(null);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
   };
 
   const handleNext = () => {
@@ -213,14 +242,14 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
     }
 
     setStep((current) => Math.min(current + 1, STEP_LABELS.length - 1));
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
   };
 
   const handleBack = () => {
     setStep((current) => Math.max(current - 1, 0));
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
   };
 
   const handleSubmit = async () => {
@@ -229,26 +258,30 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
     }
 
     if (!customerName.trim() || !customerPhone.trim()) {
-      setError('이름과 연락처를 모두 입력해 주세요.');
+      setError("이름과 연락처를 모두 입력해 주세요.");
       return;
     }
 
-    const selectedService = services.find((service) => service.id === selectedServiceId);
+    const selectedService = services.find(
+      (service) => service.id === selectedServiceId,
+    );
     if (!selectedService) {
-      setError('서비스를 선택해 주세요.');
+      setError("서비스를 선택해 주세요.");
       return;
     }
 
     const dateKey = toDateKey(selectedDate);
     const reservedSlots = reservationsByDate[dateKey];
     if (reservedSlots?.has(selectedTime)) {
-      setError('방금 다른 예약이 접수되어 이 시간은 선택할 수 없습니다. 다시 선택해 주세요.');
+      setError(
+        "방금 다른 예약이 접수되어 이 시간은 선택할 수 없습니다. 다시 선택해 주세요.",
+      );
       setStep(1);
       return;
     }
 
     setSubmitting(true);
-    setError('');
+    setError("");
 
     try {
       await reservationStorage.createReservation(
@@ -259,17 +292,22 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
         selectedService.id,
         selectedService.title,
       );
-      setSuccess('예약이 완료되었습니다.');
+      setSuccess("예약이 완료되었습니다.");
     } catch (submissionError) {
-      console.error('Failed to create reservation:', submissionError);
+      console.error("Failed to create reservation:", submissionError);
 
-      if (submissionError instanceof Error && submissionError.message === 'RESERVATION_ALREADY_EXISTS') {
-        setError('이미 다른 사용자가 예약한 시간입니다. 다른 시간을 선택해 주세요.');
+      if (
+        submissionError instanceof Error &&
+        submissionError.message === "RESERVATION_ALREADY_EXISTS"
+      ) {
+        setError(
+          "이미 다른 사용자가 예약한 시간입니다. 다른 시간을 선택해 주세요.",
+        );
         setStep(1);
         return;
       }
 
-      setError('예약 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+      setError("예약 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
       setSubmitting(false);
     }
@@ -280,7 +318,8 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
       return (
         <div className="space-y-4">
           <div className="rounded-2xl border border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
-            오늘 이후 날짜만 선택할 수 있습니다. 휴무일과 예약이 모두 마감된 날짜는 비활성화됩니다.
+            오늘 이후 날짜만 선택할 수 있습니다. 휴무일과 예약이 모두 마감된
+            날짜는 비활성화됩니다.
           </div>
           <div className="flex justify-center rounded-3xl border border-border/60 bg-background">
             <Calendar
@@ -300,20 +339,21 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
       return (
         <div className="space-y-4">
           <div className="rounded-2xl border border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
-            {selectedDateLabel}의 예약 가능 시간을 선택해 주세요. 예약은 1시간 단위로 진행됩니다.
+            {selectedDateLabel}의 예약 가능 시간을 선택해 주세요. 예약은 1시간
+            단위로 진행됩니다.
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {availableTimes.map(({ time, disabled }) => (
               <Button
                 key={time}
                 type="button"
-                variant={selectedTime === time ? 'default' : 'outline'}
+                variant={selectedTime === time ? "default" : "outline"}
                 className="h-12 rounded-2xl"
                 disabled={disabled}
                 onClick={() => {
                   setSelectedTime(time);
-                  setError('');
-                  setSuccess('');
+                  setError("");
+                  setSuccess("");
                 }}
               >
                 {time}
@@ -339,7 +379,9 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">예약 날짜</p>
-                <p className="font-medium text-foreground">{selectedDateLabel}</p>
+                <p className="font-medium text-foreground">
+                  {selectedDateLabel}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -356,7 +398,10 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground" htmlFor="reservation-name">
+            <label
+              className="text-sm font-medium text-foreground"
+              htmlFor="reservation-name"
+            >
               이름
             </label>
             <div className="relative">
@@ -366,7 +411,7 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
                 value={customerName}
                 onChange={(event) => {
                   setCustomerName(event.target.value);
-                  setError('');
+                  setError("");
                 }}
                 className="pl-10"
                 placeholder="예약자 이름"
@@ -374,15 +419,18 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground" htmlFor="reservation-phone">
+            <label
+              className="text-sm font-medium text-foreground"
+              htmlFor="reservation-phone"
+            >
               연락처
             </label>
             <Input
               id="reservation-phone"
               value={customerPhone}
               onChange={(event) => {
-                setCustomerPhone(event.target.value.replace(/[^\d]/g, ''));
-                setError('');
+                setCustomerPhone(event.target.value.replace(/[^\d]/g, ""));
+                setError("");
               }}
               inputMode="numeric"
               pattern="[0-9]*"
@@ -392,12 +440,14 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">서비스 선택</label>
+          <label className="text-sm font-medium text-foreground">
+            서비스 선택
+          </label>
           <Select
             value={selectedServiceId}
             onValueChange={(value) => {
               setSelectedServiceId(value);
-              setError('');
+              setError("");
             }}
           >
             <SelectTrigger>
@@ -414,7 +464,8 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
         </div>
 
         <div className="rounded-2xl border border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
-          이름과 연락처를 입력해야 예약이 완료됩니다. 취소를 누르면 저장되지 않습니다.
+          이름과 연락처를 입력해야 예약이 완료됩니다. 취소를 누르면 저장되지
+          않습니다.
         </div>
       </div>
     );
@@ -426,38 +477,55 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
         <div className="shrink-0 border-b border-border/60 px-4 py-4 sm:px-8 sm:py-5">
           <DialogHeader className="space-y-2 text-left">
             <DialogTitle className="text-2xl">예약하기</DialogTitle>
-            <DialogDescription>날짜, 시간, 확인 순서대로 예약을 진행합니다.</DialogDescription>
+            <DialogDescription>
+              날짜, 시간, 확인 순서대로 예약을 진행합니다.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
             {STEP_LABELS.map((label, index) => {
               const active = index === step;
-              const completed = index < step || (success && index === STEP_LABELS.length - 1);
+              const completed =
+                index < step || (success && index === STEP_LABELS.length - 1);
 
               return (
                 <div
                   key={label}
                   className={cn(
-                    'rounded-2xl border px-3 py-3 text-left transition-colors sm:px-4',
-                    active && 'border-primary bg-primary/10',
-                    !active && 'border-border/60 bg-muted/20',
+                    "rounded-2xl border px-3 py-3 text-left transition-colors sm:px-4",
+                    active && "border-primary bg-primary/10",
+                    !active && "border-border/60 bg-muted/20",
                   )}
                 >
                   <div className="mb-2 flex items-center gap-2 text-sm">
                     <span
                       className={cn(
-                        'flex h-6 w-6 items-center justify-center rounded-full border text-xs font-semibold',
-                        active && 'border-primary bg-primary text-primary-foreground',
-                        !active && 'border-border/60 text-muted-foreground',
+                        "flex h-6 w-6 items-center justify-center rounded-full border text-xs font-semibold",
+                        active &&
+                          "border-primary bg-primary text-primary-foreground",
+                        !active && "border-border/60 text-muted-foreground",
                       )}
                     >
-                      {completed ? <Check className="h-3.5 w-3.5" /> : index + 1}
+                      {completed ? (
+                        <Check className="h-3.5 w-3.5" />
+                      ) : (
+                        index + 1
+                      )}
                     </span>
-                    <span className={cn(active ? 'text-foreground' : 'text-muted-foreground')}>
+                    <span
+                      className={cn(
+                        active ? "text-foreground" : "text-muted-foreground",
+                      )}
+                    >
                       Step {index + 1}
                     </span>
                   </div>
-                  <p className={cn('text-sm font-medium', active ? 'text-foreground' : 'text-muted-foreground')}>
+                  <p
+                    className={cn(
+                      "text-sm font-medium",
+                      active ? "text-foreground" : "text-muted-foreground",
+                    )}
+                  >
                     {label}
                   </p>
                 </div>
@@ -499,20 +567,35 @@ export function ReservationDialog({ open, onOpenChange, siteSettings }: Reservat
                 )}
               </div>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
                   취소
                 </Button>
                 {step < STEP_LABELS.length - 1 ? (
-                  <Button type="button" onClick={handleNext} disabled={!canGoNext}>
+                  <Button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={!canGoNext}
+                  >
                     다음
                   </Button>
                 ) : (
                   <Button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={submitting || !selectedDate || !selectedTime || !customerName.trim() || !customerPhone.trim() || !selectedServiceId.trim()}
+                    disabled={
+                      submitting ||
+                      !selectedDate ||
+                      !selectedTime ||
+                      !customerName.trim() ||
+                      !customerPhone.trim() ||
+                      !selectedServiceId.trim()
+                    }
                   >
-                    {submitting ? '예약 중...' : '예약'}
+                    {submitting ? "예약 중..." : "예약"}
                   </Button>
                 )}
               </div>

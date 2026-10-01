@@ -1,18 +1,31 @@
-import { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Expand, ExternalLink, Play, Star, Trash2 } from 'lucide-react';
-import { FacebookEmbed } from 'react-social-media-embed';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { Expand, ExternalLink, Play, Star, Trash2 } from "lucide-react";
+import { FacebookEmbed } from "react-social-media-embed";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
-} from '@/components/ui/dialog';
-import type { GalleryImage, PriceItem, Service, Testimonial, Video } from '@/lib/index';
+} from "@/components/ui/dialog";
+import type {
+  GalleryImage,
+  PriceItem,
+  Service,
+  Testimonial,
+  Video,
+} from "@/lib/index";
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -29,16 +42,16 @@ const getPlayableEmbedUrl = (value: string) => {
     const parsed = new URL(value);
     const hostname = parsed.hostname.toLowerCase();
 
-    if (hostname.includes('instagram.com')) {
-      const segments = parsed.pathname.split('/').filter(Boolean);
+    if (hostname.includes("instagram.com")) {
+      const segments = parsed.pathname.split("/").filter(Boolean);
       const [kind, id] = segments;
 
-      if (id && ['reel', 'p', 'tv'].includes(kind)) {
+      if (id && ["reel", "p", "tv"].includes(kind)) {
         return `https://www.instagram.com/${kind}/${id}/embed/captioned/`;
       }
     }
 
-    if (hostname.includes('tiktok.com')) {
+    if (hostname.includes("tiktok.com")) {
       const match = parsed.pathname.match(/\/video\/(\d+)/);
       const videoId = match?.[1];
 
@@ -57,31 +70,34 @@ const getPlayableEmbedUrl = (value: string) => {
   return null;
 };
 
-const isDirectVideoFile = (value: string) => /\.(mp4|webm|ogg)(\?|#|$)/i.test(value);
+const isDirectVideoFile = (value: string) =>
+  /\.(mp4|webm|ogg)(\?|#|$)/i.test(value);
 
 const getVideoPlatform = (value: string) => {
   try {
     const hostname = new URL(value).hostname.toLowerCase();
 
-    if (hostname.includes('instagram.com')) return 'instagram';
-    if (hostname.includes('tiktok.com')) return 'tiktok';
-    if (hostname.includes('facebook.com') || hostname.includes('fb.watch')) return 'facebook';
-    if (hostname.includes('x.com') || hostname.includes('twitter.com')) return 'x';
+    if (hostname.includes("instagram.com")) return "instagram";
+    if (hostname.includes("tiktok.com")) return "tiktok";
+    if (hostname.includes("facebook.com") || hostname.includes("fb.watch"))
+      return "facebook";
+    if (hostname.includes("x.com") || hostname.includes("twitter.com"))
+      return "x";
   } catch {
-    return 'unknown';
+    return "unknown";
   }
 
-  return 'unknown';
+  return "unknown";
 };
 
 const getOpenLinkLabel = (platform: ReturnType<typeof getVideoPlatform>) => {
   switch (platform) {
-    case 'facebook':
-      return '페이스북 새창 열기';
-    case 'x':
-      return 'X 새창 열기';
+    case "facebook":
+      return "페이스북 새창 열기";
+    case "x":
+      return "X 새창 열기";
     default:
-      return '원본 새창 열기';
+      return "원본 새창 열기";
   }
 };
 
@@ -92,13 +108,13 @@ export function ServiceCard({ service }: { service: Service }) {
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true }}
-      transition={{ type: 'spring', stiffness: 300, damping: 35 }}
+      transition={{ type: "spring", stiffness: 300, damping: 35 }}
     >
       <motion.div
         variants={hoverLift}
         initial="rest"
         whileHover="hover"
-        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
       >
         <Card className="h-full overflow-hidden border-border/50 shadow-lg transition-shadow hover:shadow-xl">
           <div className="relative aspect-[4/3] overflow-hidden">
@@ -110,8 +126,12 @@ export function ServiceCard({ service }: { service: Service }) {
             <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
           </div>
           <CardHeader>
-            <CardTitle className="text-2xl font-semibold text-foreground">{service.title}</CardTitle>
-            <CardDescription className="whitespace-pre-line text-muted-foreground">{service.description}</CardDescription>
+            <CardTitle className="text-2xl font-semibold text-foreground">
+              {service.title}
+            </CardTitle>
+            <CardDescription className="whitespace-pre-line text-muted-foreground">
+              {service.description}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
@@ -136,13 +156,13 @@ export function PriceCard({ item }: { item: PriceItem }) {
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true }}
-      transition={{ type: 'spring', stiffness: 300, damping: 35 }}
+      transition={{ type: "spring", stiffness: 300, damping: 35 }}
     >
       <motion.div
         variants={hoverLift}
         initial="rest"
         whileHover="hover"
-        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
       >
         <Card className="h-full border-border/50 bg-gradient-to-br from-card to-card/50 shadow-md transition-shadow hover:shadow-lg">
           <CardHeader>
@@ -151,14 +171,24 @@ export function PriceCard({ item }: { item: PriceItem }) {
                 <Badge variant="secondary" className="mb-2">
                   {item.category}
                 </Badge>
-                <CardTitle className="text-xl font-semibold text-foreground">{item.name}</CardTitle>
+                <CardTitle className="text-xl font-semibold text-foreground">
+                  {item.name}
+                </CardTitle>
                 {item.description && (
-                  <CardDescription className="mt-2 whitespace-pre-line text-muted-foreground">{item.description}</CardDescription>
+                  <CardDescription className="mt-2 whitespace-pre-line text-muted-foreground">
+                    {item.description}
+                  </CardDescription>
                 )}
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold text-primary">{item.price}</div>
-                {item.duration && <div className="mt-1 text-sm text-muted-foreground">{item.duration}</div>}
+                <div className="text-3xl font-bold text-primary">
+                  {item.price}
+                </div>
+                {item.duration && (
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    {item.duration}
+                  </div>
+                )}
               </div>
             </div>
           </CardHeader>
@@ -183,53 +213,65 @@ export function TestimonialCard({
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true }}
-      transition={{ type: 'spring', stiffness: 300, damping: 35 }}
+      transition={{ type: "spring", stiffness: 300, damping: 35 }}
     >
       <motion.div
         variants={hoverLift}
         initial="rest"
         whileHover="hover"
-        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
       >
         <Card
           className={`h-full border-border/50 bg-gradient-to-br from-card via-card/80 to-card/50 shadow-md transition-shadow hover:shadow-lg ${
-            onClick ? 'cursor-pointer' : ''
+            onClick ? "cursor-pointer" : ""
           }`}
           onClick={() => onClick?.(testimonial)}
         >
           <CardHeader>
             <div className="flex items-center gap-4">
               <Avatar className="h-12 w-12 border-2 border-primary/20">
-                {(testimonial.avatar || thumbnail) && <AvatarImage src={testimonial.avatar || thumbnail} />}
+                {(testimonial.avatar || thumbnail) && (
+                  <AvatarImage src={testimonial.avatar || thumbnail} />
+                )}
                 <AvatarFallback className="bg-primary/10 font-semibold text-primary">
                   {testimonial.name.charAt(0)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <CardTitle className="text-lg font-semibold text-foreground">{testimonial.name}</CardTitle>
+                <CardTitle className="text-lg font-semibold text-foreground">
+                  {testimonial.name}
+                </CardTitle>
                 <div className="mt-1 flex items-center gap-1">
                   {Array.from({ length: 5 }).map((_, index) => (
                     <Star
                       key={index}
                       className={`h-4 w-4 ${
-                        index < testimonial.rating ? 'fill-primary text-primary' : 'text-muted'
+                        index < testimonial.rating
+                          ? "fill-primary text-primary"
+                          : "text-muted"
                       }`}
                     />
                   ))}
                 </div>
               </div>
               <div className="text-sm text-muted-foreground">
-                {new Date(testimonial.date).toLocaleDateString('ko-KR')}
+                {new Date(testimonial.date).toLocaleDateString("ko-KR")}
               </div>
             </div>
           </CardHeader>
           <CardContent>
             {thumbnail && (
               <div className="mb-4 overflow-hidden rounded-2xl border border-border/50">
-                <img src={thumbnail} alt={`${testimonial.name} 후기 썸네일`} className="h-56 w-full object-cover" />
+                <img
+                  src={thumbnail}
+                  alt={`${testimonial.name} 후기 썸네일`}
+                  className="h-56 w-full object-cover"
+                />
               </div>
             )}
-            <p className="leading-relaxed text-foreground/80">{testimonial.comment}</p>
+            <p className="leading-relaxed text-foreground/80">
+              {testimonial.comment}
+            </p>
           </CardContent>
         </Card>
       </motion.div>
@@ -247,11 +289,14 @@ export function VideoCard({
   isAdmin?: boolean;
 }) {
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
-  const playableUrl = useMemo(() => getPlayableEmbedUrl(video.url), [video.url]);
+  const playableUrl = useMemo(
+    () => getPlayableEmbedUrl(video.url),
+    [video.url],
+  );
   const directVideo = useMemo(() => isDirectVideoFile(video.url), [video.url]);
   const platform = useMemo(() => getVideoPlatform(video.url), [video.url]);
   const openLinkLabel = useMemo(() => getOpenLinkLabel(platform), [platform]);
-  const isFacebook = platform === 'facebook';
+  const isFacebook = platform === "facebook";
 
   return (
     <>
@@ -260,18 +305,22 @@ export function VideoCard({
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true }}
-        transition={{ type: 'spring', stiffness: 300, damping: 35 }}
+        transition={{ type: "spring", stiffness: 300, damping: 35 }}
       >
         <motion.div
           variants={hoverLift}
           initial="rest"
           whileHover="hover"
-          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+          transition={{ type: "spring", stiffness: 400, damping: 30 }}
         >
           <Card className="h-full overflow-hidden border-border/50 shadow-lg transition-shadow hover:shadow-xl">
             <div className="relative aspect-video bg-muted">
               {video.thumbnail ? (
-                <img src={video.thumbnail} alt={video.title} className="h-full w-full object-cover" />
+                <img
+                  src={video.thumbnail}
+                  alt={video.title}
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/10 to-secondary/10">
                   <Play className="h-16 w-16 text-primary/40" />
@@ -279,18 +328,26 @@ export function VideoCard({
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
               <div className="absolute inset-0 flex items-center justify-center bg-background/20 opacity-0 backdrop-blur-sm transition-opacity hover:opacity-100">
-                <Button size="lg" className="h-16 w-16 rounded-full p-0" onClick={() => setIsPlayerOpen(true)}>
+                <Button
+                  size="lg"
+                  className="h-16 w-16 rounded-full p-0"
+                  onClick={() => setIsPlayerOpen(true)}
+                >
                   <Play className="h-8 w-8" />
                 </Button>
               </div>
             </div>
             <CardHeader>
-              <CardTitle className="line-clamp-2 text-lg font-semibold text-foreground">{video.title}</CardTitle>
-              <CardDescription className="line-clamp-2 text-muted-foreground">{video.description}</CardDescription>
+              <CardTitle className="line-clamp-2 text-lg font-semibold text-foreground">
+                {video.title}
+              </CardTitle>
+              <CardDescription className="line-clamp-2 text-muted-foreground">
+                {video.description}
+              </CardDescription>
             </CardHeader>
             <CardFooter className="flex items-center justify-between gap-3">
               <span className="text-sm text-muted-foreground">
-                {new Date(video.created_at).toLocaleDateString('ko-KR')}
+                {new Date(video.created_at).toLocaleDateString("ko-KR")}
               </span>
               <div className="flex items-center gap-2">
                 {!playableUrl && !isFacebook && (
@@ -302,10 +359,14 @@ export function VideoCard({
                   </Button>
                 )}
                 {isAdmin && onDelete && (
-                <Button variant="destructive" size="sm" onClick={() => onDelete(video.id)}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  삭제
-                </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => onDelete(video.id)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    삭제
+                  </Button>
                 )}
               </div>
             </CardFooter>
@@ -314,13 +375,19 @@ export function VideoCard({
       </motion.div>
 
       <Dialog open={isPlayerOpen} onOpenChange={setIsPlayerOpen}>
-        <DialogContent className={`flex h-[92dvh] w-[calc(100vw-1rem)] max-w-5xl flex-col gap-0 overflow-hidden border-none p-0 sm:h-[88dvh] sm:w-[calc(100vw-3rem)] sm:rounded-xl ${isFacebook ? 'bg-white' : 'bg-black'}`}>
+        <DialogContent
+          className={`flex h-[92dvh] w-[calc(100vw-1rem)] max-w-5xl flex-col gap-0 overflow-hidden border-none p-0 sm:h-[88dvh] sm:w-[calc(100vw-3rem)] sm:rounded-xl ${isFacebook ? "bg-white" : "bg-black"}`}
+        >
           <DialogTitle className="sr-only">{video.title}</DialogTitle>
           <DialogDescription className="sr-only">
-              {video.description || '등록된 영상 주소를 모달에서 재생합니다.'}
-            </DialogDescription>
-          <div className={`flex min-h-0 flex-1 items-center justify-center p-2 sm:p-4 ${isFacebook ? 'overflow-y-auto bg-neutral-100' : 'bg-black'}`}>
-            <div className={`flex h-full w-full items-center justify-center overflow-hidden rounded-xl ${isFacebook ? 'bg-neutral-100' : 'bg-black'}`}>
+            {video.description || "등록된 영상 주소를 모달에서 재생합니다."}
+          </DialogDescription>
+          <div
+            className={`flex min-h-0 flex-1 items-center justify-center p-2 sm:p-4 ${isFacebook ? "overflow-y-auto bg-neutral-100" : "bg-black"}`}
+          >
+            <div
+              className={`flex h-full w-full items-center justify-center overflow-hidden rounded-xl ${isFacebook ? "bg-neutral-100" : "bg-black"}`}
+            >
               {isFacebook ? (
                 <div className="flex w-full justify-center py-4">
                   <FacebookEmbed url={video.url} width={550} />
@@ -374,13 +441,13 @@ export function GalleryImageCard({
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true }}
-        transition={{ type: 'spring', stiffness: 300, damping: 35 }}
+        transition={{ type: "spring", stiffness: 300, damping: 35 }}
       >
         <motion.div
           variants={hoverLift}
           initial="rest"
           whileHover="hover"
-          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+          transition={{ type: "spring", stiffness: 400, damping: 30 }}
         >
           <Card className="h-full overflow-hidden border-border/50 shadow-lg transition-shadow hover:shadow-xl">
             <button
@@ -388,7 +455,11 @@ export function GalleryImageCard({
               className="group relative block aspect-[4/5] w-full overflow-hidden bg-muted text-left"
               onClick={() => setIsPreviewOpen(true)}
             >
-              <img src={image.url} alt={image.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+              <img
+                src={image.url}
+                alt={image.title}
+                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent" />
               <div className="absolute inset-0 flex items-center justify-center bg-background/20 opacity-0 transition-opacity group-hover:opacity-100">
                 <div className="rounded-full bg-background/80 p-3 shadow-md">
@@ -402,15 +473,23 @@ export function GalleryImageCard({
                   {image.categoryName}
                 </Badge>
               )}
-              <CardTitle className="line-clamp-2 text-lg font-semibold text-foreground">{image.title}</CardTitle>
-              <CardDescription className="line-clamp-2 text-muted-foreground">{image.description}</CardDescription>
+              <CardTitle className="line-clamp-2 text-lg font-semibold text-foreground">
+                {image.title}
+              </CardTitle>
+              <CardDescription className="line-clamp-2 text-muted-foreground">
+                {image.description}
+              </CardDescription>
             </CardHeader>
             <CardFooter className="flex items-center justify-between gap-3">
               <span className="text-sm text-muted-foreground">
-                {new Date(image.created_at).toLocaleDateString('ko-KR')}
+                {new Date(image.created_at).toLocaleDateString("ko-KR")}
               </span>
               {isAdmin && onDelete && (
-                <Button variant="destructive" size="sm" onClick={() => onDelete(image)}>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => onDelete(image)}
+                >
                   <Trash2 className="mr-2 h-4 w-4" />
                   삭제
                 </Button>
@@ -424,11 +503,15 @@ export function GalleryImageCard({
         <DialogContent className="max-h-[90dvh] w-[calc(100vw-1rem)] max-w-5xl overflow-hidden p-0">
           <DialogTitle className="sr-only">{image.title}</DialogTitle>
           <DialogDescription className="sr-only">
-            {image.description || '등록된 이미지를 크게 확인합니다.'}
+            {image.description || "등록된 이미지를 크게 확인합니다."}
           </DialogDescription>
           <div className="grid max-h-[90dvh] md:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
             <div className="max-h-[45dvh] min-h-[240px] overflow-auto bg-black md:max-h-[90dvh]">
-              <img src={image.url} alt={image.title} className="h-full w-full object-contain" />
+              <img
+                src={image.url}
+                alt={image.title}
+                className="h-full w-full object-contain"
+              />
             </div>
             <div className="max-h-[45dvh] space-y-3 overflow-y-auto p-6 md:max-h-[90dvh]">
               {image.categoryName && (
@@ -436,12 +519,14 @@ export function GalleryImageCard({
                   {image.categoryName}
                 </Badge>
               )}
-              <h3 className="text-xl font-semibold text-foreground">{image.title}</h3>
+              <h3 className="text-xl font-semibold text-foreground">
+                {image.title}
+              </h3>
               <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
-                {image.description || '설명이 등록되지 않았습니다.'}
+                {image.description || "설명이 등록되지 않았습니다."}
               </p>
               <p className="text-sm text-muted-foreground">
-                등록일 {new Date(image.created_at).toLocaleDateString('ko-KR')}
+                등록일 {new Date(image.created_at).toLocaleDateString("ko-KR")}
               </p>
             </div>
           </div>

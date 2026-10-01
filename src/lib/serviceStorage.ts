@@ -9,27 +9,34 @@ import {
   query,
   setDoc,
   updateDoc,
-} from 'firebase/firestore';
-import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import type { Service } from './index';
-import { db, isFirebaseConfigured, storage } from './firebase';
+} from "firebase/firestore";
+import {
+  deleteObject,
+  getDownloadURL,
+  ref,
+  uploadBytes,
+} from "firebase/storage";
+import type { Service } from "./index";
+import { db, isFirebaseConfigured, storage } from "./firebase";
 
-const SERVICES_COLLECTION = 'services';
+const SERVICES_COLLECTION = "services";
 
-type CreateServiceInput = Omit<Service, 'id'>;
-type UpdateServiceInput = Omit<Service, 'id'> & {
+type CreateServiceInput = Omit<Service, "id">;
+type UpdateServiceInput = Omit<Service, "id"> & {
   previousImage?: string;
 };
 
 const assertFirebaseConfigured = () => {
   if (!isFirebaseConfigured) {
-    throw new Error('Firebase is not configured. Check your VITE_FIREBASE_* environment variables.');
+    throw new Error(
+      "Firebase is not configured. Check your VITE_FIREBASE_* environment variables.",
+    );
   }
 };
 
 const getFileExtension = (file: File) => {
-  const parts = file.name.split('.');
-  return (parts[parts.length - 1] || 'jpg').toLowerCase();
+  const parts = file.name.split(".");
+  return (parts[parts.length - 1] || "jpg").toLowerCase();
 };
 
 const deleteStoredImage = async (url?: string) => {
@@ -40,7 +47,7 @@ const deleteStoredImage = async (url?: string) => {
   try {
     await deleteObject(ref(storage, url));
   } catch (error) {
-    console.error('Failed to delete service image file:', error);
+    console.error("Failed to delete service image file:", error);
   }
 };
 
@@ -48,7 +55,7 @@ export const serviceStorage = {
   createServicesQuery() {
     assertFirebaseConfigured();
 
-    return query(collection(db, SERVICES_COLLECTION), orderBy('title', 'asc'));
+    return query(collection(db, SERVICES_COLLECTION), orderBy("title", "asc"));
   },
 
   async getServices(): Promise<Service[]> {
@@ -56,22 +63,25 @@ export const serviceStorage = {
     const snapshot = await getDocs(servicesQuery);
 
     return snapshot.docs.map((snapshotDoc) => ({
-      ...(snapshotDoc.data() as Omit<Service, 'id'>),
+      ...(snapshotDoc.data() as Omit<Service, "id">),
       id: snapshotDoc.id,
-      visible: (snapshotDoc.data() as Omit<Service, 'id'>).visible ?? true,
+      visible: (snapshotDoc.data() as Omit<Service, "id">).visible ?? true,
     }));
   },
 
-  subscribeServices(onData: (items: Service[]) => void, onError?: (error: Error) => void) {
+  subscribeServices(
+    onData: (items: Service[]) => void,
+    onError?: (error: Error) => void,
+  ) {
     const servicesQuery = this.createServicesQuery();
 
     return onSnapshot(
       servicesQuery,
       (snapshot: any) => {
         const items = snapshot.docs.map((snapshotDoc: any) => ({
-          ...(snapshotDoc.data() as Omit<Service, 'id'>),
+          ...(snapshotDoc.data() as Omit<Service, "id">),
           id: snapshotDoc.id,
-          visible: (snapshotDoc.data() as Omit<Service, 'id'>).visible ?? true,
+          visible: (snapshotDoc.data() as Omit<Service, "id">).visible ?? true,
         }));
 
         onData(items);
@@ -113,7 +123,11 @@ export const serviceStorage = {
 
     await Promise.all(
       items.map(({ id, ...service }) =>
-        setDoc(doc(db, SERVICES_COLLECTION, id), { ...service, visible: service.visible ?? true }, { merge: true }),
+        setDoc(
+          doc(db, SERVICES_COLLECTION, id),
+          { ...service, visible: service.visible ?? true },
+          { merge: true },
+        ),
       ),
     );
   },
@@ -127,7 +141,10 @@ export const serviceStorage = {
       await deleteStoredImage(previousImage);
     }
 
-    await updateDoc(doc(db, SERVICES_COLLECTION, id), { ...payload, visible: payload.visible ?? true });
+    await updateDoc(doc(db, SERVICES_COLLECTION, id), {
+      ...payload,
+      visible: payload.visible ?? true,
+    });
   },
 
   async deleteService(service: Service): Promise<void> {

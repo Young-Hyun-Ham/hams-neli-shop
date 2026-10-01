@@ -1,20 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Star } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import type { Testimonial } from '@/lib/index';
-import { ROUTE_PATHS } from '@/lib/index';
-import { testimonialStorage } from '@/lib/testimonialStorage';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { useEffect, useMemo, useState } from "react";
+import { Loader2, Star } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import type { Testimonial } from "@/lib/index";
+import { ROUTE_PATHS } from "@/lib/index";
+import { testimonialStorage } from "@/lib/testimonialStorage";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface TestimonialDetailDialogProps {
   testimonial: Testimonial | null;
@@ -23,7 +23,7 @@ interface TestimonialDetailDialogProps {
   showActions?: boolean;
 }
 
-const EDIT_DRAFT_STORAGE_KEY = 'testimonial-edit-draft';
+const EDIT_DRAFT_STORAGE_KEY = "testimonial-edit-draft";
 
 export function TestimonialDetailDialog({
   testimonial,
@@ -32,8 +32,8 @@ export function TestimonialDetailDialog({
   showActions = true,
 }: TestimonialDetailDialogProps) {
   const navigate = useNavigate();
-  const [passwordInput, setPasswordInput] = useState('');
-  const [error, setError] = useState('');
+  const [passwordInput, setPasswordInput] = useState("");
+  const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const images = useMemo(() => {
@@ -41,26 +41,30 @@ export function TestimonialDetailDialog({
       return [];
     }
 
-    return testimonial.images?.length ? testimonial.images : testimonial.image ? [testimonial.image] : [];
+    return testimonial.images?.length
+      ? testimonial.images
+      : testimonial.image
+        ? [testimonial.image]
+        : [];
   }, [testimonial]);
 
   useEffect(() => {
-    setPasswordInput('');
-    setError('');
+    setPasswordInput("");
+    setError("");
   }, [testimonial]);
 
   const verifyPassword = () => {
     if (!testimonial?.password) {
-      setError('이 후기는 비밀번호 정보가 없어 수정 또는 삭제할 수 없습니다.');
+      setError("이 후기는 비밀번호 정보가 없어 수정 또는 삭제할 수 없습니다.");
       return false;
     }
 
     if (passwordInput !== testimonial.password) {
-      setError('비밀번호가 올바르지 않습니다.');
+      setError("비밀번호가 올바르지 않습니다.");
       return false;
     }
 
-    setError('');
+    setError("");
     return true;
   };
 
@@ -69,7 +73,7 @@ export function TestimonialDetailDialog({
       return;
     }
 
-    const confirmed = window.confirm('수정 페이지로 이동 하시겠습니까?');
+    const confirmed = window.confirm("수정 페이지로 이동 하시겠습니까?");
     if (!confirmed) {
       return;
     }
@@ -95,20 +99,20 @@ export function TestimonialDetailDialog({
       return;
     }
 
-    const confirmed = window.confirm('삭제 하시겠습니까?');
+    const confirmed = window.confirm("삭제 하시겠습니까?");
     if (!confirmed) {
       return;
     }
 
     setSubmitting(true);
-    setError('');
+    setError("");
 
     try {
       await testimonialStorage.deleteTestimonial(testimonial);
       onOpenChange(false);
     } catch (deleteError) {
-      console.error('Failed to delete testimonial:', deleteError);
-      setError('후기 삭제 중 오류가 발생했습니다.');
+      console.error("Failed to delete testimonial:", deleteError);
+      setError("후기 삭제 중 오류가 발생했습니다.");
     } finally {
       setSubmitting(false);
     }
@@ -122,7 +126,8 @@ export function TestimonialDetailDialog({
             <DialogHeader>
               <DialogTitle>{testimonial.name}님의 후기</DialogTitle>
               <DialogDescription>
-                {new Date(testimonial.date).toLocaleDateString('ko-KR')} · 별점 {testimonial.rating} / 5
+                {new Date(testimonial.date).toLocaleDateString("ko-KR")} · 별점{" "}
+                {testimonial.rating} / 5
               </DialogDescription>
             </DialogHeader>
 
@@ -130,7 +135,10 @@ export function TestimonialDetailDialog({
               {images.length > 0 && (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {images.map((image, index) => (
-                    <div key={`${image}-${index}`} className="overflow-hidden rounded-2xl border border-border/50">
+                    <div
+                      key={`${image}-${index}`}
+                      className="overflow-hidden rounded-2xl border border-border/50"
+                    >
                       <img
                         src={image}
                         alt={`${testimonial.name} 후기 이미지 ${index + 1}`}
@@ -147,12 +155,16 @@ export function TestimonialDetailDialog({
                     <Star
                       key={index}
                       className={`h-5 w-5 ${
-                        index < testimonial.rating ? 'fill-primary text-primary' : 'text-muted-foreground'
+                        index < testimonial.rating
+                          ? "fill-primary text-primary"
+                          : "text-muted-foreground"
                       }`}
                     />
                   ))}
                 </div>
-                <p className="whitespace-pre-wrap leading-7 text-foreground/85">{testimonial.comment}</p>
+                <p className="whitespace-pre-wrap leading-7 text-foreground/85">
+                  {testimonial.comment}
+                </p>
               </div>
 
               {showActions && (
@@ -175,11 +187,26 @@ export function TestimonialDetailDialog({
                   )}
 
                   <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                    <Button type="button" variant="outline" onClick={handleEdit} className="cursor-pointer">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleEdit}
+                      className="cursor-pointer"
+                    >
                       수정
                     </Button>
-                    <Button type="button" variant="destructive" onClick={handleDelete} disabled={submitting} className="cursor-pointer">
-                      {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : '삭제'}
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={handleDelete}
+                      disabled={submitting}
+                      className="cursor-pointer"
+                    >
+                      {submitting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "삭제"
+                      )}
                     </Button>
                   </div>
                 </>

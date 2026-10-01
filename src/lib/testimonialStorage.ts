@@ -8,18 +8,29 @@ import {
   orderBy,
   query,
   updateDoc,
-} from 'firebase/firestore';
-import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import type { Testimonial } from './index';
-import { db, isFirebaseConfigured, storage } from './firebase';
+} from "firebase/firestore";
+import {
+  deleteObject,
+  getDownloadURL,
+  ref,
+  uploadBytes,
+} from "firebase/storage";
+import type { Testimonial } from "./index";
+import { db, isFirebaseConfigured, storage } from "./firebase";
 
-const TESTIMONIALS_COLLECTION = 'testimonials';
+const TESTIMONIALS_COLLECTION = "testimonials";
 
-type CreateTestimonialInput = Omit<Testimonial, 'id' | 'date' | 'created_at'> & {
+type CreateTestimonialInput = Omit<
+  Testimonial,
+  "id" | "date" | "created_at"
+> & {
   password: string;
 };
 
-type UpdateTestimonialInput = Pick<Testimonial, 'name' | 'rating' | 'comment'> & {
+type UpdateTestimonialInput = Pick<
+  Testimonial,
+  "name" | "rating" | "comment"
+> & {
   image?: string;
   images?: string[];
   avatar?: string;
@@ -28,25 +39,30 @@ type UpdateTestimonialInput = Pick<Testimonial, 'name' | 'rating' | 'comment'> &
 
 const assertFirebaseConfigured = () => {
   if (!isFirebaseConfigured) {
-    throw new Error('Firebase is not configured. Check your VITE_FIREBASE_* environment variables.');
+    throw new Error(
+      "Firebase is not configured. Check your VITE_FIREBASE_* environment variables.",
+    );
   }
 };
 
 const getFileExtension = (file: File) => {
-  const parts = file.name.split('.');
-  return (parts[parts.length - 1] || 'jpg').toLowerCase();
+  const parts = file.name.split(".");
+  return (parts[parts.length - 1] || "jpg").toLowerCase();
 };
 
-const normalizeTestimonial = (
-  snapshotDoc: { id: string; data: () => Omit<Testimonial, 'id'> },
-): Testimonial => {
+const normalizeTestimonial = (snapshotDoc: {
+  id: string;
+  data: () => Omit<Testimonial, "id">;
+}): Testimonial => {
   const data = snapshotDoc.data();
   const images = Array.isArray(data.images)
-    ? data.images.filter((item): item is string => typeof item === 'string' && item.length > 0)
+    ? data.images.filter(
+        (item): item is string => typeof item === "string" && item.length > 0,
+      )
     : data.image
       ? [data.image]
       : [];
-  const coverImage = images[0] || data.image || '';
+  const coverImage = images[0] || data.image || "";
 
   return {
     id: snapshotDoc.id,
@@ -63,7 +79,7 @@ const deleteStoredImages = async (urls: string[]) => {
       try {
         await deleteObject(ref(storage, url));
       } catch (error) {
-        console.error('Failed to delete testimonial image:', error);
+        console.error("Failed to delete testimonial image:", error);
       }
     }),
   );
@@ -73,7 +89,10 @@ export const testimonialStorage = {
   createTestimonialsQuery() {
     assertFirebaseConfigured();
 
-    return query(collection(db, TESTIMONIALS_COLLECTION), orderBy('created_at', 'desc'));
+    return query(
+      collection(db, TESTIMONIALS_COLLECTION),
+      orderBy("created_at", "desc"),
+    );
   },
 
   async getTestimonials(): Promise<Testimonial[]> {
@@ -83,7 +102,7 @@ export const testimonialStorage = {
     return snapshot.docs.map((snapshotDoc) =>
       normalizeTestimonial({
         id: snapshotDoc.id,
-        data: () => snapshotDoc.data() as Omit<Testimonial, 'id'>,
+        data: () => snapshotDoc.data() as Omit<Testimonial, "id">,
       }),
     );
   },
@@ -100,7 +119,7 @@ export const testimonialStorage = {
         const items = snapshot.docs.map((snapshotDoc: any) =>
           normalizeTestimonial({
             id: snapshotDoc.id,
-            data: () => snapshotDoc.data() as Omit<Testimonial, 'id'>,
+            data: () => snapshotDoc.data() as Omit<Testimonial, "id">,
           }),
         );
 
@@ -130,13 +149,17 @@ export const testimonialStorage = {
     return Promise.all(files.map((file) => this.uploadImage(file)));
   },
 
-  async addTestimonial(testimonial: CreateTestimonialInput): Promise<Testimonial> {
+  async addTestimonial(
+    testimonial: CreateTestimonialInput,
+  ): Promise<Testimonial> {
     assertFirebaseConfigured();
 
     const created_at = new Date().toISOString();
     const date = new Date(created_at).toISOString().slice(0, 10);
-    const images = testimonial.images?.filter(Boolean) ?? (testimonial.image ? [testimonial.image] : []);
-    const image = images[0] || '';
+    const images =
+      testimonial.images?.filter(Boolean) ??
+      (testimonial.image ? [testimonial.image] : []);
+    const image = images[0] || "";
     const avatar = testimonial.avatar || image;
 
     const payload = {
@@ -148,7 +171,10 @@ export const testimonialStorage = {
       created_at,
     };
 
-    const docRef = await addDoc(collection(db, TESTIMONIALS_COLLECTION), payload);
+    const docRef = await addDoc(
+      collection(db, TESTIMONIALS_COLLECTION),
+      payload,
+    );
 
     return {
       id: docRef.id,
@@ -156,7 +182,10 @@ export const testimonialStorage = {
     };
   },
 
-  async updateTestimonial(id: string, updates: UpdateTestimonialInput): Promise<void> {
+  async updateTestimonial(
+    id: string,
+    updates: UpdateTestimonialInput,
+  ): Promise<void> {
     assertFirebaseConfigured();
 
     if (updates.removedImages?.length) {
@@ -173,7 +202,11 @@ export const testimonialStorage = {
   async deleteTestimonial(testimonial: Testimonial): Promise<void> {
     assertFirebaseConfigured();
 
-    const imageUrls = testimonial.images?.length ? testimonial.images : testimonial.image ? [testimonial.image] : [];
+    const imageUrls = testimonial.images?.length
+      ? testimonial.images
+      : testimonial.image
+        ? [testimonial.image]
+        : [];
     await deleteStoredImages(imageUrls);
     await deleteDoc(doc(db, TESTIMONIALS_COLLECTION, testimonial.id));
   },
