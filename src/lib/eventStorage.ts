@@ -12,11 +12,11 @@ import {
 import {
   deleteObject,
   getDownloadURL,
+  getMetadata,
   list,
   ref,
   uploadBytes,
 } from "firebase/storage";
-import { IMAGES } from "@/assets/images";
 import type { EventItem } from "./index";
 import { db, isFirebaseConfigured, storage } from "./firebase";
 
@@ -77,7 +77,7 @@ const sortEvents = (items: EventItem[]) =>
 const withDefaults = (item: Omit<EventItem, "id">, id: string): EventItem => ({
   ...item,
   id,
-  image: item.image || IMAGES.GALLERY_10,
+  image: item.image?.trim() || "",
   visible: item.visible ?? true,
 });
 
@@ -159,6 +159,9 @@ export const eventStorage = {
 
     await uploadBytes(storageRef, file, {
       contentType: file.type || `image/${extension}`,
+      customMetadata: {
+        originalName: file.name,
+      },
     });
 
     return getDownloadURL(storageRef);
@@ -172,11 +175,18 @@ export const eventStorage = {
       pageToken,
     });
     const items = await Promise.all(
-      result.items.map(async (itemRef) => ({
-        name: itemRef.name,
-        fullPath: itemRef.fullPath,
-        url: await getDownloadURL(itemRef),
-      })),
+      result.items.map(async (itemRef) => {
+        const [url, metadata] = await Promise.all([
+          getDownloadURL(itemRef),
+          getMetadata(itemRef),
+        ]);
+
+        return {
+          name: metadata.customMetadata?.originalName?.trim() || itemRef.name,
+          fullPath: itemRef.fullPath,
+          url,
+        };
+      }),
     );
 
     return {
@@ -190,7 +200,7 @@ export const eventStorage = {
 
     const payload = {
       ...item,
-      image: item.image || IMAGES.GALLERY_10,
+      image: item.image.trim(),
       createdAt: item.createdAt ?? new Date().toISOString(),
       visible: item.visible ?? true,
     };
@@ -213,7 +223,7 @@ export const eventStorage = {
 
     await updateDoc(doc(db, EVENTS_COLLECTION, id), {
       ...payload,
-      image: payload.image || IMAGES.GALLERY_10,
+      image: payload.image.trim(),
       visible: payload.visible ?? true,
     });
   },

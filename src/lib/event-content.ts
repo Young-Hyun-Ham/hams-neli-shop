@@ -10,6 +10,7 @@ const ALLOWED_TAGS = new Set([
   "h3",
   "h4",
   "hr",
+  "img",
   "li",
   "ol",
   "p",
@@ -17,13 +18,21 @@ const ALLOWED_TAGS = new Set([
   "s",
   "span",
   "strong",
+  "table",
+  "tbody",
+  "td",
+  "th",
+  "thead",
+  "tr",
   "u",
   "ul",
 ]);
 
 const ALLOWED_ATTRIBUTES = new Set([
+  "alt",
   "data-event-body",
   "href",
+  "src",
   "style",
   "target",
   "title",
@@ -34,17 +43,22 @@ const ALLOWED_STYLE_PROPERTIES = new Set([
   "background-position",
   "background-repeat",
   "background-size",
+  "border-collapse",
+  "border-color",
   "border-radius",
+  "border-style",
+  "border-width",
   "color",
   "display",
   "font-family",
   "font-size",
   "min-height",
   "padding",
+  "text-align",
   "width",
 ]);
 const HTML_TAG_PATTERN =
-  /<(?:a|blockquote|br|code|div|em|h[1-4]|hr|li|ol|p|pre|s|span|strong|u|ul)(?:\s|>|\/)/i;
+  /<(?:a|blockquote|br|code|div|em|h[1-4]|hr|img|li|ol|p|pre|s|span|strong|table|tbody|td|th|thead|tr|u|ul)(?:\s|>|\/)/i;
 
 const isSafeHref = (value: string) => {
   const href = value.trim();
@@ -106,6 +120,14 @@ export const sanitizeEventHtml = (content: string) => {
         element.setAttribute("rel", "noopener noreferrer");
       } else {
         element.removeAttribute("target");
+      }
+    }
+
+    if (tagName === "img") {
+      const src = element.getAttribute("src");
+      if (!src || !/^https?:\/\//i.test(src.trim())) {
+        element.remove();
+        continue;
       }
     }
 

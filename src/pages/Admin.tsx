@@ -3247,7 +3247,7 @@ export default function Admin() {
                         {eventImageMode === "url" ? (
                           <div className="space-y-2">
                             <Label htmlFor="event-image">
-                              배경 이미지 주소
+                              배경 이미지 주소 (선택)
                             </Label>
                             <Input
                               id="event-image"
@@ -3255,11 +3255,11 @@ export default function Admin() {
                               onChange={(event) =>
                                 setEventImage(event.target.value)
                               }
-                              placeholder="비워두면 기본 이미지를 사용합니다."
+                              placeholder="이미지가 필요 없으면 비워두세요."
                             />
                             <p className="text-sm text-muted-foreground">
-                              비워두면 메인 팝업에 어울리는 기본 배경 이미지가
-                              적용됩니다.
+                              비워두면 빈 값으로 저장되며 이벤트 팝업에 배경
+                              이미지가 표시되지 않습니다.
                             </p>
                           </div>
                         ) : (
@@ -5627,7 +5627,9 @@ export default function Admin() {
                 </div>
                 {editEvent.imageMode === "url" ? (
                   <div className="space-y-2">
-                    <Label htmlFor="edit-event-image">배경 이미지 주소</Label>
+                    <Label htmlFor="edit-event-image">
+                      배경 이미지 주소 (선택)
+                    </Label>
                     <Input
                       id="edit-event-image"
                       value={editEvent.image}
@@ -5637,8 +5639,12 @@ export default function Admin() {
                           image: event.target.value,
                         }))
                       }
-                      placeholder="비워두면 기본 이미지를 사용합니다."
+                      placeholder="이미지가 필요 없으면 비워두세요."
                     />
+                    <p className="text-sm text-muted-foreground">
+                      비워두면 빈 값으로 저장되며 이벤트 팝업에 배경 이미지가
+                      표시되지 않습니다.
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-2">

@@ -801,27 +801,41 @@ export default function Home() {
       />
       {activeEvent ? (
         <Dialog open={eventModalOpen} onOpenChange={setEventModalOpen}>
-          <DialogContent className="overflow-hidden border-0 p-0 sm:max-w-xl">
-            <div className="relative">
-              <img
-                src={activeEvent.image || IMAGES.GALLERY_10}
-                alt={activeEvent.title}
-                className="h-64 w-full object-cover sm:h-72"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 p-6 text-white">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.35em] text-white/80">
-                  Special Event
-                </p>
-                <h2 className="text-3xl font-bold">{activeEvent.title}</h2>
-                <p className="mt-2 text-sm text-white/85">
+          <DialogContent className="flex flex-col gap-0 overflow-hidden border-0 p-0 [&>button]:z-20 sm:h-[660px] sm:w-[576px] sm:max-w-[576px]">
+            <DialogTitle className="sr-only">
+              {activeEvent.title} ({activeEvent.startDate} ~{" "}
+              {activeEvent.endDate})
+            </DialogTitle>
+            {activeEvent.image ? (
+              <div className="relative shrink-0">
+                <img
+                  src={activeEvent.image}
+                  alt={activeEvent.title}
+                  className="h-64 w-full object-cover sm:h-72"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-6 text-white">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.35em] text-white/80">
+                    Special Event
+                  </p>
+                  <h2 className="text-3xl font-bold">{activeEvent.title}</h2>
+                  <p className="mt-2 text-sm text-white/85">
+                    {activeEvent.startDate} ~ {activeEvent.endDate}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="relative z-10 flex shrink-0 items-center gap-3 border-b border-primary/10 bg-gradient-to-br from-primary/10 via-background to-accent/20 py-4 pl-6 pr-16 shadow-[0_10px_24px_-16px_hsl(var(--foreground)/0.45)]">
+                <h2 className="min-w-0 truncate text-sm font-semibold tracking-tight text-foreground">
+                  {activeEvent.title}
+                </h2>
+                <p className="shrink-0 whitespace-nowrap rounded-full border border-primary/15 bg-background/80 px-3 py-1 text-xs font-medium tracking-wide text-muted-foreground shadow-sm backdrop-blur-sm">
                   {activeEvent.startDate} ~ {activeEvent.endDate}
                 </p>
               </div>
-            </div>
-            <div className="space-y-5 p-6">
+            )}
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
               <DialogHeader className="space-y-3 text-left">
-                {/* <DialogTitle className="text-2xl">{activeEvent.subTitle}</DialogTitle> */}
                 <DialogDescription asChild>
                   <EventContent
                     content={activeEvent.content}
@@ -829,14 +843,19 @@ export default function Home() {
                   />
                 </DialogDescription>
               </DialogHeader>
-              <Button asChild className="w-full rounded-2xl py-6 text-base">
+            </div>
+            <div className="relative z-10 flex shrink-0 items-center gap-2 border-t border-primary/10 bg-background px-4 py-3 shadow-[0_-10px_24px_-18px_hsl(var(--foreground)/0.35)]">
+              <Button
+                asChild
+                className="h-10 min-w-0 flex-1 rounded-xl text-sm"
+              >
                 <Link to={ROUTE_PATHS.EVENTS}>이벤트 자세히 보기</Link>
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleDismissEventForOneDay}
-                className="w-full rounded-xl border-primary/30 bg-background text-sm font-medium text-muted-foreground hover:bg-primary/5 hover:text-foreground"
+                className="h-9 shrink-0 whitespace-nowrap rounded-lg border-primary/30 bg-background px-3 text-xs font-medium text-muted-foreground hover:bg-primary/5 hover:text-foreground"
               >
                 하루동안열지않기
               </Button>
