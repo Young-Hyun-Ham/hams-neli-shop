@@ -1,5 +1,5 @@
-import { createCipheriv, createHash, randomBytes } from 'node:crypto';
-import type { IncomingMessage, ServerResponse } from 'node:http';
+import { createCipheriv, createHash, randomBytes } from "node:crypto";
+import type { IncomingMessage, ServerResponse } from "node:http";
 
 import {
   clearServiceSession,
@@ -8,7 +8,7 @@ import {
   getClearedSSOStateCookieHeader,
   getSSOStateFromRequest,
   getServiceViewerFromRequest,
-} from './sso-session.js';
+} from "./sso-session.js";
 
 type Next = () => void;
 
@@ -48,20 +48,28 @@ function getEnv(names: string[], fallback?: string) {
   return fallback;
 }
 
-export function writeJson(res: ServerResponse, statusCode: number, body: unknown) {
+export function writeJson(
+  res: ServerResponse,
+  statusCode: number,
+  body: unknown,
+) {
   res.statusCode = statusCode;
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.end(JSON.stringify(body));
 }
 
-export function redirect(res: ServerResponse, location: string, setCookie?: string | string[]) {
+export function redirect(
+  res: ServerResponse,
+  location: string,
+  setCookie?: string | string[],
+) {
   res.statusCode = 302;
 
   if (setCookie) {
-    res.setHeader('Set-Cookie', setCookie);
+    res.setHeader("Set-Cookie", setCookie);
   }
 
-  res.setHeader('Location', location);
+  res.setHeader("Location", location);
   res.end();
 }
 
@@ -70,34 +78,49 @@ function createState() {
 }
 
 function getEncryptionKey(secret: string) {
-  return createHash('sha256').update(secret).digest();
+  return createHash("sha256").update(secret).digest();
 }
 
 function encryptLogoutToken(payload: LogoutTokenPayload, secret: string) {
   const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', getEncryptionKey(secret), iv);
+  const cipher = createCipheriv("aes-256-gcm", getEncryptionKey(secret), iv);
   const encrypted = Buffer.concat([
-    cipher.update(JSON.stringify(payload), 'utf8'),
+    cipher.update(JSON.stringify(payload), "utf8"),
     cipher.final(),
   ]);
   const tag = cipher.getAuthTag();
 
-  return `${iv.toString('base64url')}.${encrypted.toString('base64url')}.${tag.toString('base64url')}`;
+  return `${iv.toString("base64url")}.${encrypted.toString("base64url")}.${tag.toString("base64url")}`;
 }
 
 export function getServiceSSOConfig() {
-  const authOrigin = getEnv(['SSO_AUTH_ORIGIN', 'VITE_SSO_AUTH_ORIGIN'], 'http://localhost:3000');
-  const clientId = getEnv(['SSO_CLIENT_ID', 'VITE_SSO_CLIENT_ID'], 'service-3001');
-  const serviceOrigin = getEnv(['SERVICE_ORIGIN', 'VITE_SERVICE_ORIGIN'], 'http://localhost:3001');
-  const callbackPath = getEnv(['SSO_CALLBACK_PATH', 'VITE_SSO_CALLBACK_PATH'], '/auth/sso/callback');
-  const exchangePath = getEnv(['SSO_EXCHANGE_PATH', 'VITE_SSO_EXCHANGE_PATH'], '/api/sso/exchange');
+  const authOrigin = getEnv(
+    ["SSO_AUTH_ORIGIN", "VITE_SSO_AUTH_ORIGIN"],
+    "http://localhost:3000",
+  );
+  const clientId = getEnv(
+    ["SSO_CLIENT_ID", "VITE_SSO_CLIENT_ID"],
+    "service-3001",
+  );
+  const serviceOrigin = getEnv(
+    ["SERVICE_ORIGIN", "VITE_SERVICE_ORIGIN"],
+    "http://localhost:3001",
+  );
+  const callbackPath = getEnv(
+    ["SSO_CALLBACK_PATH", "VITE_SSO_CALLBACK_PATH"],
+    "/auth/sso/callback",
+  );
+  const exchangePath = getEnv(
+    ["SSO_EXCHANGE_PATH", "VITE_SSO_EXCHANGE_PATH"],
+    "/api/sso/exchange",
+  );
   const clientSecret = getEnv(
-    ['SERVICE_SSO_CLIENT_SECRET', 'SSO_CLIENT_SECRET'],
-    'dev-service-3001-secret',
+    ["SERVICE_SSO_CLIENT_SECRET", "SSO_CLIENT_SECRET"],
+    "dev-service-3001-secret",
   );
   const loginStartPath = getEnv(
-    ['SSO_LOGIN_START_PATH', 'VITE_SSO_LOGIN_START_PATH'],
-    '/auth/sso/login',
+    ["SSO_LOGIN_START_PATH", "VITE_SSO_LOGIN_START_PATH"],
+    "/auth/sso/login",
   );
 
   return {
@@ -113,7 +136,8 @@ export function getServiceSSOConfig() {
 }
 
 function createServiceLogoutRedirectUrl() {
-  const { authOrigin, clientId, clientSecret, serviceOrigin, loginStartPath } = getServiceSSOConfig();
+  const { authOrigin, clientId, clientSecret, serviceOrigin, loginStartPath } =
+    getServiceSSOConfig();
   const issuedAt = Date.now();
   const payload = {
     logout: true,
@@ -124,9 +148,9 @@ function createServiceLogoutRedirectUrl() {
     expiresAt: issuedAt + LOGOUT_TOKEN_TTL_MS,
   } satisfies LogoutTokenPayload;
   const token = encryptLogoutToken(payload, clientSecret);
-  const logoutUrl = new URL('/sso/logout', authOrigin);
+  const logoutUrl = new URL("/sso/logout", authOrigin);
 
-  logoutUrl.searchParams.set('sso_logout_token', token);
+  logoutUrl.searchParams.set("sso_logout_token", token);
   return logoutUrl.toString();
 }
 
@@ -135,49 +159,53 @@ function getRequestUrl(req: IncomingMessage) {
     return null;
   }
 
-  const host = req.headers.host || 'localhost';
+  const host = req.headers.host || "localhost";
   const protocol =
-    typeof req.headers['x-forwarded-proto'] === 'string'
-      ? req.headers['x-forwarded-proto']
-      : 'http';
+    typeof req.headers["x-forwarded-proto"] === "string"
+      ? req.headers["x-forwarded-proto"]
+      : "http";
 
   return new URL(req.url, `${protocol}://${host}`);
 }
 
 async function handleLoginStart(req: IncomingMessage, res: ServerResponse) {
-  if (req.method !== 'GET') {
-    writeJson(res, 405, { error: 'method_not_allowed' });
+  if (req.method !== "GET") {
+    writeJson(res, 405, { error: "method_not_allowed" });
     return true;
   }
 
   const { authOrigin, clientId, redirectUri } = getServiceSSOConfig();
   const state = createState();
-  const authUrl = new URL('/sso/start', authOrigin);
+  const authUrl = new URL("/sso/start", authOrigin);
 
-  authUrl.searchParams.set('client_id', clientId);
-  authUrl.searchParams.set('redirect_uri', redirectUri);
-  authUrl.searchParams.set('state', state);
+  authUrl.searchParams.set("client_id", clientId);
+  authUrl.searchParams.set("redirect_uri", redirectUri);
+  authUrl.searchParams.set("state", state);
 
   redirect(res, authUrl.toString(), createSSOStateCookie(state));
   return true;
 }
 
-async function handleCallback(req: IncomingMessage, res: ServerResponse, url: URL) {
-  if (req.method !== 'GET') {
-    writeJson(res, 405, { error: 'method_not_allowed' });
+async function handleCallback(
+  req: IncomingMessage,
+  res: ServerResponse,
+  url: URL,
+) {
+  if (req.method !== "GET") {
+    writeJson(res, 405, { error: "method_not_allowed" });
     return true;
   }
 
   const { exchangeUrl, clientId, clientSecret, redirectUri, serviceOrigin } =
     getServiceSSOConfig();
-  const code = url.searchParams.get('code')?.trim() ?? '';
-  const state = url.searchParams.get('state')?.trim() ?? '';
+  const code = url.searchParams.get("code")?.trim() ?? "";
+  const state = url.searchParams.get("state")?.trim() ?? "";
   const storedState = getSSOStateFromRequest(req);
 
   if (!code || !state || !storedState || storedState !== state) {
     redirect(
       res,
-      new URL('/?sso=invalid_state', serviceOrigin).toString(),
+      new URL("/?sso=invalid_state", serviceOrigin).toString(),
       getClearedSSOStateCookieHeader(),
     );
     return true;
@@ -185,10 +213,10 @@ async function handleCallback(req: IncomingMessage, res: ServerResponse, url: UR
 
   try {
     const exchangeResponse = await fetch(exchangeUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
+        "Content-Type": "application/json",
+        Accept: "application/json",
       },
       body: JSON.stringify({
         client_id: clientId,
@@ -201,7 +229,7 @@ async function handleCallback(req: IncomingMessage, res: ServerResponse, url: UR
     if (!exchangeResponse.ok) {
       redirect(
         res,
-        new URL('/?sso=exchange_failed', serviceOrigin).toString(),
+        new URL("/?sso=exchange_failed", serviceOrigin).toString(),
         getClearedSSOStateCookieHeader(),
       );
       return true;
@@ -212,38 +240,43 @@ async function handleCallback(req: IncomingMessage, res: ServerResponse, url: UR
     if (!payload.ok || !payload.user) {
       redirect(
         res,
-        new URL('/?sso=exchange_failed', serviceOrigin).toString(),
+        new URL("/?sso=exchange_failed", serviceOrigin).toString(),
         getClearedSSOStateCookieHeader(),
       );
       return true;
     }
 
-    redirect(
-      res,
-      new URL('/', serviceOrigin).toString(),
-      [getClearedSSOStateCookieHeader(), ...createServiceSessionCookie(payload.user)],
-    );
+    redirect(res, new URL("/", serviceOrigin).toString(), [
+      getClearedSSOStateCookieHeader(),
+      ...createServiceSessionCookie(payload.user),
+    ]);
     return true;
   } catch (error) {
-    console.error('Failed to exchange SSO code:', error);
+    console.error("Failed to exchange SSO code:", error);
     redirect(
       res,
-      new URL('/?sso=exchange_failed', serviceOrigin).toString(),
+      new URL("/?sso=exchange_failed", serviceOrigin).toString(),
       getClearedSSOStateCookieHeader(),
     );
     return true;
   }
 }
 
-export async function handleServiceSSOLogin(req: IncomingMessage, res: ServerResponse) {
+export async function handleServiceSSOLogin(
+  req: IncomingMessage,
+  res: ServerResponse,
+) {
   return handleLoginStart(req, res);
 }
 
-export async function handleServiceSSOCallback(req: IncomingMessage, res: ServerResponse) {
+export async function handleServiceSSOCallback(
+  req: IncomingMessage,
+  res: ServerResponse,
+) {
   const url = getRequestUrl(req);
 
   if (!url) {
-    writeJson(res, 400, { error: 'invalid_request_url' });
+    writeJson(res, 400, { error: "invalid_request_url" });
     return false;
   }
 
@@ -262,7 +295,7 @@ export async function handleServiceApiRequest(
     return false;
   }
 
-  if (req.method === 'GET' && url.pathname === '/api/me') {
+  if (req.method === "GET" && url.pathname === "/api/me") {
     const user = getServiceViewerFromRequest(req);
 
     if (!user) {
@@ -274,7 +307,37 @@ export async function handleServiceApiRequest(
     return true;
   }
 
-  if (req.method === 'POST' && url.pathname === '/api/logout') {
+  if (req.method === "GET" && url.pathname === "/api/members") {
+    const user = getServiceViewerFromRequest(req);
+    const adminEmails = new Set(
+      getEnv(["ADMIN_EMAILS", "VITE_ADMIN_EMAILS"], "")
+        .split(",")
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean),
+    );
+    if (!user || !adminEmails.has(user.email.trim().toLowerCase())) {
+      writeJson(res, 403, { ok: false, error: "admin_required" });
+      return true;
+    }
+    const { authOrigin, clientId, clientSecret } = getServiceSSOConfig();
+    try {
+      const membersUrl = new URL("/api/sso/admin/users", authOrigin);
+      membersUrl.searchParams.set("q", url.searchParams.get("q") ?? "");
+      const response = await fetch(membersUrl, {
+        headers: {
+          "x-hams-client-id": clientId,
+          "x-hams-client-secret": clientSecret,
+        },
+      });
+      writeJson(res, response.status, await response.json());
+    } catch (error) {
+      console.error("Failed to search SSO members:", error);
+      writeJson(res, 502, { ok: false, error: "member_search_failed" });
+    }
+    return true;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/logout") {
     clearServiceSession(res);
     writeJson(res, 200, {
       ok: true,

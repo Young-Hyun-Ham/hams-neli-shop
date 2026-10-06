@@ -120,6 +120,56 @@ export interface Reservation {
   createdAt: string;
 }
 
+export type MembershipPassCustomerType = "member" | "nonMember";
+
+export interface MembershipPass {
+  id: string;
+  customerType: MembershipPassCustomerType;
+  memberRefId?: string;
+  customerName: string;
+  phone: string;
+  memberId?: string;
+  passType: "service" | "amount";
+  passName: string;
+  serviceId?: string;
+  serviceName?: string;
+  totalUses?: number;
+  remainingUses?: number;
+  initialAmount: number;
+  balance: number;
+  expiresAt?: string;
+  status: "active" | "usedUp" | "expired" | "stopped";
+  memo?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MembershipPassTransaction {
+  id: string;
+  passId: string;
+  priceItemId: string;
+  serviceName: string;
+  regularPrice: number;
+  deductedAmount: number;
+  useCount?: number;
+  remainingUsesBefore?: number;
+  remainingUsesAfter?: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  memo?: string;
+  status: "completed" | "canceled";
+  usedAt: string;
+  canceledAt?: string;
+}
+
+export interface Member {
+  id: string;
+  name: string;
+  phone: string;
+  memberNumber: string;
+  email?: string;
+}
+
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   addressLine1: "서울 강남구 테헤란로 123",
   addressLine2: "네일아트 빌딩 2층",

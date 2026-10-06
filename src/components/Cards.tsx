@@ -150,6 +150,13 @@ export function ServiceCard({ service }: { service: Service }) {
 }
 
 export function PriceCard({ item }: { item: PriceItem }) {
+
+  function priceViewFormatNumber(valStr: string): number {
+    // 쉼표(,) 제거 후 숫자로 변환하여 10,000으로 나눔
+    const num = Number(valStr.replace(/,/g, '')) / 10000;
+    return num;
+  }
+
   return (
     <motion.div
       variants={cardVariants}
@@ -182,7 +189,7 @@ export function PriceCard({ item }: { item: PriceItem }) {
               </div>
               <div className="text-right">
                 <div className="text-3xl font-bold text-primary">
-                  {item.price}
+                  {priceViewFormatNumber(item.price)}
                 </div>
                 {item.duration && (
                   <div className="mt-1 text-sm text-muted-foreground">
